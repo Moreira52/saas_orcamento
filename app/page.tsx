@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -45,6 +45,12 @@ export default function HomePage() {
   const [activeClientId, setActiveClientId] = useState<string | null>(
     clients[0]?.id || null
   );
+
+  useEffect(() => {
+    if (!activeClientId && clients.length > 0) {
+      setActiveClientId(clients[0].id);
+    }
+  }, [clients, activeClientId]);
 
   // Buscar campanhas do cliente ativo
   const { data: campaignsData, isLoading: loadingCampaigns } = useQuery({
