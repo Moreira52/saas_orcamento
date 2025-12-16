@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import MonthYearPicker from '@/components/ui/month-year-picker';
 import CampaignsTable from '@/components/tables/campaigns-table';
 import { Client, Campaign } from '@/types/database';
 import { Plus, Clock, X } from 'lucide-react';
@@ -139,14 +139,7 @@ export default function HomePage() {
 
   const activeClient = clients.find((c) => c.id === activeClientId);
 
-  // Gerar lista de meses (últimos 12 + próximos 3)
-  const monthOptions = Array.from({ length: 15 }, (_, i) => {
-    const date = new Date();
-    date.setMonth(date.getMonth() - 12 + i);
-    const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-    const label = date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-    return { value, label: label.charAt(0).toUpperCase() + label.slice(1) };
-  });
+
 
   if (loadingClients) {
     return (
@@ -184,18 +177,10 @@ export default function HomePage() {
               Budget Tracker - Tráfego Pago
             </h1>
             <div className="flex items-center gap-4">
-              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {monthOptions.map((month) => (
-                    <SelectItem key={month.value} value={month.value}>
-                      {month.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <MonthYearPicker
+                value={selectedMonth}
+                onChange={setSelectedMonth}
+              />
             </div>
           </div>
         </div>
