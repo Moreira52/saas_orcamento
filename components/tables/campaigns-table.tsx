@@ -46,26 +46,56 @@ export default function CampaignsTable({
     });
 
     useEffect(() => {
-        if (editingCell && debouncedValue !== null) {
-            const [campaignId, field] = editingCell.split('-');
-            handleSave(campaignId, field, debouncedValue);
+        if (editingCell && debouncedValue !== null && debouncedValue !== '') {
+            const [campaignId, field] = editingCell.split('|');
+            handleSave(campaignId, field, editValue);
         }
     }, [debouncedValue]);
 
     const handleSave = async (id: string, field: string, value: any) => {
         try {
+            // Converter para número se for campo numérico
+            let finalValue = value;
+
+            if (field === 'current_spend' || field === 'meta_percentage') {
+                const numValue = parseFloat(value.toString().replace(',', '.'));
+
+                // Validar número
+                if (isNaN(numValue)) {
+                    console.error('Valor inválido:', value);
+                    return;
+                }
+
+                // Validar negativo
+                if (numValue < 0) {
+                    console.error('Valor não pode ser negativo');
+                    return;
+                }
+
+                finalValue = numValue;
+            }
+
             await updateMutation.mutateAsync({
                 id,
-                data: { [field]: value },
+                data: { [field]: finalValue },
             });
+
+            console.log('✅ Salvo:', field, finalValue);
         } catch (error) {
-            console.error('Erro ao salvar:', error);
+            console.error('❌ Erro ao salvar:', error);
         }
+    };
+
+    // Função para salvar imediatamente (ao pressionar Enter)
+    const handleImmediateSave = async (campaignId: string, field: string, value: string) => {
+        await handleSave(campaignId, field, value);
+        setEditingCell(null);
+        setEditValue('');
     };
 
     const columns = useMemo<ColumnDef<Campaign>[]>(
         () => [
-            // COLUNA 1: Canal (Meta Ads, Google Ads, etc.)
+            // COLUNA 1: Canal
             {
                 accessorKey: 'channel',
                 header: 'Canal',
@@ -95,13 +125,13 @@ export default function CampaignsTable({
                 },
             },
 
-            // COLUNA 2: Tipo de Campanha (editável)
+            // COLUNA 2: Tipo de Campanha
             {
                 accessorKey: 'campaign_type',
                 header: 'Tipo de Campanha',
                 cell: ({ row }) => {
                     const campaignId = row.original.id;
-                    const isEditing = editingCell === `${campaignId}-campaign_type`;
+                    const isEditing = editingCell === `${campaignId}|campaign_type`;
 
                     if (isEditing) {
                         return (
@@ -111,9 +141,20 @@ export default function CampaignsTable({
                                 className="w-full border rounded px-2 py-1 text-sm"
                                 value={editValue}
                                 onChange={(e) => setEditValue(e.target.value)}
-                                onBlur={() => setEditingCell(null)}
+                                onBlur={() => {
+                                    if (editValue !== row.original.campaign_type) {
+                                        handleImmediateSave(campaignId, 'campaign_type', editValue);
+                                    } else {
+                                        setEditingCell(null);
+                                    }
+                                }}
                                 onKeyDown={(e) => {
-                                    if (e.key === 'Enter') setEditingCell(null);
+                                    if (e.key === 'Enter') {
+                                        handleImmediateSave(campaignId, 'campaign_type', editValue);
+                                    } else if (e.key === 'Escape') {
+                                        setEditingCell(null);
+                                        setEditValue('');
+                                    }
                                 }}
                             />
                         );
@@ -122,7 +163,7 @@ export default function CampaignsTable({
                     return (
                         <div
                             onClick={() => {
-                                setEditingCell(`${campaignId}-campaign_type`);
+                                setEditingCell(`${campaignId}|campaign_type`);
                                 setEditValue(row.original.campaign_type || '');
                             }}
                             className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded"
@@ -133,7 +174,7 @@ export default function CampaignsTable({
                 },
             },
 
-            // COLUNA 3: Plano de Mídia (orçamento)
+            // COLUNA 3: Plano de Mídia
             {
                 accessorKey: 'budget',
                 header: 'Plano de Mídia',
@@ -160,13 +201,13 @@ export default function CampaignsTable({
                 },
             },
 
-            // COLUNA 5: Meta % (editável)
+            // COLUNA 5: Meta %
             {
                 accessorKey: 'meta_percentage',
                 header: 'Meta',
                 cell: ({ row }) => {
                     const campaignId = row.original.id;
-                    const isEditing = editingCell === `${campaignId}-meta_percentage`;
+                    const isEditing = editingCell === `${campaignId}|meta_percentage`;
 
                     if (isEditing) {
                         return (
@@ -176,10 +217,25 @@ export default function CampaignsTable({
                                 step="0.1"
                                 min="0"
                                 max="100"
-                                className="w-20 border rounded px-2 py-1 text-sm"
+                                className="w-20 border-2 border-blue-500 rounded px-2 py-1 text-sm font-semibold"
                                 value={editValue}
                                 onChange={(e) => setEditValue(e.target.value)}
-                                onBlur={() => setEditingCell(null)}
+                                onBlur={() => {
+                                    if (parseFloat(editValue) !== row.original.meta_percentage) {
+                                        handleImmediateSave(campaignId, 'meta_percentage', editValue);
+                                    } else {
+                                        setEditingCell(null);
+                                    }
+                                }}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        handleImmediateSave(campaignId, 'meta_percentage', editValue);
+                                    } else if (e.key === 'Escape') {
+                                        setEditingCell(null);
+                                        setEditValue('');
+                                    }
+                                }}
                             />
                         );
                     }
@@ -187,7 +243,7 @@ export default function CampaignsTable({
                     return (
                         <div
                             onClick={() => {
-                                setEditingCell(`${campaignId}-meta_percentage`);
+                                setEditingCell(`${campaignId}|meta_percentage`);
                                 setEditValue(String(row.original.meta_percentage));
                             }}
                             className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded"
@@ -198,7 +254,7 @@ export default function CampaignsTable({
                 },
             },
 
-            // COLUNA 6: Parcial 97% (calculado automaticamente)
+            // COLUNA 6: Parcial 97%
             {
                 id: 'parcial_97',
                 header: 'Parcial 97%',
@@ -219,13 +275,13 @@ export default function CampaignsTable({
                 },
             },
 
-            // COLUNA 7: Investimento Utilizado (EDITÁVEL - campo principal)
+            // COLUNA 7: Investimento Utilizado (CAMPO PRINCIPAL EDITÁVEL)
             {
                 accessorKey: 'current_spend',
                 header: 'Investimento Utilizado',
                 cell: ({ row }) => {
                     const campaignId = row.original.id;
-                    const isEditing = editingCell === `${campaignId}-current_spend`;
+                    const isEditing = editingCell === `${campaignId}|current_spend`;
 
                     if (isEditing) {
                         return (
@@ -237,7 +293,22 @@ export default function CampaignsTable({
                                 className="w-32 border-2 border-blue-500 rounded px-2 py-1 text-sm font-semibold"
                                 value={editValue}
                                 onChange={(e) => setEditValue(e.target.value)}
-                                onBlur={() => setEditingCell(null)}
+                                onBlur={() => {
+                                    if (parseFloat(editValue) !== row.original.current_spend) {
+                                        handleImmediateSave(campaignId, 'current_spend', editValue);
+                                    } else {
+                                        setEditingCell(null);
+                                    }
+                                }}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        handleImmediateSave(campaignId, 'current_spend', editValue);
+                                    } else if (e.key === 'Escape') {
+                                        setEditingCell(null);
+                                        setEditValue('');
+                                    }
+                                }}
                                 placeholder="R$ 0,00"
                             />
                         );
@@ -246,7 +317,7 @@ export default function CampaignsTable({
                     return (
                         <div
                             onClick={() => {
-                                setEditingCell(`${campaignId}-current_spend`);
+                                setEditingCell(`${campaignId}|current_spend`);
                                 setEditValue(String(row.original.current_spend));
                             }}
                             className="cursor-pointer hover:bg-blue-50 px-2 py-1 rounded border-2 border-transparent hover:border-blue-300 transition-all"
@@ -259,7 +330,7 @@ export default function CampaignsTable({
                 },
             },
 
-            // COLUNA 8: Parcial 100% (calculado)
+            // COLUNA 8: Parcial 100%
             {
                 id: 'parcial_100',
                 header: 'Parcial 100%',
@@ -280,7 +351,7 @@ export default function CampaignsTable({
                 },
             },
 
-            // COLUNA 9: % Meta (porcentagem da meta atingida)
+            // COLUNA 9: % Meta
             {
                 id: 'percent_meta',
                 header: '% Meta',
@@ -351,7 +422,7 @@ export default function CampaignsTable({
                 },
             },
 
-            // COLUNA 12: % Gasto Real (badge colorido)
+            // COLUNA 12: % Gasto Real
             {
                 id: 'percent_real_spent',
                 header: '% Gasto Real',
@@ -372,7 +443,7 @@ export default function CampaignsTable({
                 },
             },
 
-            // COLUNA 13: Status (pace)
+            // COLUNA 13: Status
             {
                 id: 'status',
                 header: 'Status',
@@ -395,7 +466,7 @@ export default function CampaignsTable({
                 },
             },
 
-            // COLUNA 14: % Tempo (barra de progresso)
+            // COLUNA 14: % Tempo
             {
                 id: 'percent_time',
                 header: '% Tempo',
@@ -422,7 +493,7 @@ export default function CampaignsTable({
                 },
             },
 
-            // COLUNA 15: % Budget (barra de progresso)
+            // COLUNA 15: % Budget
             {
                 id: 'percent_budget',
                 header: '% Budget',
@@ -455,7 +526,7 @@ export default function CampaignsTable({
                 },
             },
 
-            // COLUNA 16: Ações (deletar + observações)
+            // COLUNA 16: Ações
             {
                 id: 'actions',
                 header: 'Ações',
@@ -492,7 +563,7 @@ export default function CampaignsTable({
                 },
             },
         ],
-        [editingCell, editValue, setEditingCell, setEditValue, handleSave]
+        [editingCell, editValue]
     );
 
     const table = useReactTable({
@@ -502,39 +573,42 @@ export default function CampaignsTable({
     });
 
     return (
-        <div className="rounded-md border">
-            <div className="overflow-x-auto">
-                <table className="w-full">
-                    <thead>
-                        {table.getHeaderGroups().map((headerGroup) => (
-                            <tr key={headerGroup.id} className="border-b bg-gray-50">
-                                {headerGroup.headers.map((header) => (
-                                    <th
-                                        key={header.id}
-                                        className="px-4 py-3 text-left text-sm font-medium text-gray-700"
-                                    >
-                                        {flexRender(
-                                            header.column.columnDef.header,
-                                            header.getContext()
-                                        )}
-                                    </th>
-                                ))}
-                            </tr>
-                        ))}
-                    </thead>
-                    <tbody>
-                        {table.getRowModel().rows.map((row) => (
-                            <tr key={row.id} className="border-b hover:bg-gray-50">
-                                {row.getVisibleCells().map((cell) => (
-                                    <td key={cell.id} className="px-4 py-3 text-sm">
-                                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                    </td>
-                                ))}
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+        <>
+            <div className="rounded-md border">
+                <div className="overflow-x-auto">
+                    <table className="w-full">
+                        <thead>
+                            {table.getHeaderGroups().map((headerGroup) => (
+                                <tr key={headerGroup.id} className="border-b bg-gray-50">
+                                    {headerGroup.headers.map((header) => (
+                                        <th
+                                            key={header.id}
+                                            className="px-4 py-3 text-left text-sm font-medium text-gray-700"
+                                        >
+                                            {flexRender(
+                                                header.column.columnDef.header,
+                                                header.getContext()
+                                            )}
+                                        </th>
+                                    ))}
+                                </tr>
+                            ))}
+                        </thead>
+                        <tbody>
+                            {table.getRowModel().rows.map((row) => (
+                                <tr key={row.id} className="border-b hover:bg-gray-50">
+                                    {row.getVisibleCells().map((cell) => (
+                                        <td key={cell.id} className="px-4 py-3 text-sm">
+                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                        </td>
+                                    ))}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             </div>
+
             <ObservationsModal
                 open={showObservationsModal}
                 onClose={() => {
@@ -548,6 +622,6 @@ export default function CampaignsTable({
                     }
                 }}
             />
-        </div>
+        </>
     );
 }

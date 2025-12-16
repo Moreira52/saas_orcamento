@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase, handleSupabaseError } from '@/lib/supabase/client';
 
 // PATCH /api/campaigns/[id] - Atualizar campanha
+// PATCH /api/campaigns/[id] - Atualizar campanha
 export async function PATCH(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
@@ -9,16 +10,29 @@ export async function PATCH(
     try {
         const { id } = await params;
         const body = await request.json();
-        const { current_spend, observations, campaign_type, channel } = body;
+        const { current_spend, observations, campaign_type, channel, meta_percentage } = body;
 
         const updateData: any = {
             updated_at: new Date().toISOString(),
         };
 
+        // Campos editáveis
         if (current_spend !== undefined) updateData.current_spend = current_spend;
         if (observations !== undefined) updateData.observations = observations;
         if (campaign_type !== undefined) updateData.campaign_type = campaign_type;
         if (channel !== undefined) updateData.channel = channel;
+
+        // NOVO: Permitir editar meta_percentage
+        if (meta_percentage !== undefined) {
+            // Validação: Meta deve estar entre 0 e 100
+            if (meta_percentage < 0 || meta_percentage > 100) {
+                return NextResponse.json(
+                    { success: false, error: 'Meta deve estar entre 0% e 100%' },
+                    { status: 400 }
+                );
+            }
+            updateData.meta_percentage = meta_percentage;
+        }
 
         const { data, error } = await supabase
             .from('campaigns')
@@ -29,6 +43,7 @@ export async function PATCH(
 
         if (error) return NextResponse.json(handleSupabaseError(error), { status: 500 });
 
+        // Atualizar timestamp do cliente
         if (data) {
             await supabase
                 .from('clients')
