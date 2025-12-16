@@ -1,0 +1,553 @@
+'use client';
+
+import { useMemo, useState, useEffect } from 'react';
+import {
+    useReactTable,
+    getCoreRowModel,
+    flexRender,
+    ColumnDef,
+} from '@tanstack/react-table';
+import { Campaign } from '@/types/database';
+import { useCampaignCalculations, getStatusDisplay, getChannelIcon } from '@/lib/hooks/use-campaign-calculations';
+import { formatCurrency, formatPercentage } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
+import { Trash2, FileText } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useDebounce } from '@/lib/hooks/use-debounce';
+import ObservationsModal from '@/components/modals/observations-modal';
+
+interface CampaignsTableProps {
+    campaigns: Campaign[];
+    onUpdate: (id: string, data: Partial<Campaign>) => Promise<void>;
+    onDelete: (id: string) => Promise<void>;
+}
+
+export default function CampaignsTable({
+    campaigns,
+    onUpdate,
+    onDelete,
+}: CampaignsTableProps) {
+    const [editingCell, setEditingCell] = useState<string | null>(null);
+    const [editValue, setEditValue] = useState<string>('');
+    const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
+    const [showObservationsModal, setShowObservationsModal] = useState(false);
+
+    const queryClient = useQueryClient();
+    const debouncedValue = useDebounce(editValue, 1000);
+
+    const updateMutation = useMutation({
+        mutationFn: ({ id, data }: { id: string; data: Partial<Campaign> }) =>
+            onUpdate(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+        },
+    });
+
+    useEffect(() => {
+        if (editingCell && debouncedValue !== null) {
+            const [campaignId, field] = editingCell.split('-');
+            handleSave(campaignId, field, debouncedValue);
+        }
+    }, [debouncedValue]);
+
+    const handleSave = async (id: string, field: string, value: any) => {
+        try {
+            await updateMutation.mutateAsync({
+                id,
+                data: { [field]: value },
+            });
+        } catch (error) {
+            console.error('Erro ao salvar:', error);
+        }
+    };
+
+    const columns = useMemo<ColumnDef<Campaign>[]>(
+        () => [
+            // COLUNA 1: Canal (Meta Ads, Google Ads, etc.)
+            {
+                accessorKey: 'channel',
+                header: 'Canal',
+                cell: ({ row }) => {
+                    const channel = row.original.channel;
+                    const icon = getChannelIcon(channel);
+                    const channelNames: Record<string, string> = {
+                        meta_ads: 'Meta Ads',
+                        google_ads: 'Google Ads',
+                        linkedin_ads: 'LinkedIn Ads',
+                        tiktok_ads: 'TikTok Ads',
+                        pinterest_ads: 'Pinterest Ads',
+                        other: 'Outro',
+                    };
+
+                    return (
+                        <div className="flex items-center gap-2">
+                            <span className="text-lg">{icon}</span>
+                            <span className="font-medium">{channelNames[channel]}</span>
+                            {row.original.is_multi_month && (
+                                <Badge variant="outline" className="text-xs">
+                                    🔗 Multi-mês
+                                </Badge>
+                            )}
+                        </div>
+                    );
+                },
+            },
+
+            // COLUNA 2: Tipo de Campanha (editável)
+            {
+                accessorKey: 'campaign_type',
+                header: 'Tipo de Campanha',
+                cell: ({ row }) => {
+                    const campaignId = row.original.id;
+                    const isEditing = editingCell === `${campaignId}-campaign_type`;
+
+                    if (isEditing) {
+                        return (
+                            <input
+                                type="text"
+                                autoFocus
+                                className="w-full border rounded px-2 py-1 text-sm"
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                onBlur={() => setEditingCell(null)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') setEditingCell(null);
+                                }}
+                            />
+                        );
+                    }
+
+                    return (
+                        <div
+                            onClick={() => {
+                                setEditingCell(`${campaignId}-campaign_type`);
+                                setEditValue(row.original.campaign_type || '');
+                            }}
+                            className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded"
+                        >
+                            {row.original.campaign_type || 'Clique para editar'}
+                        </div>
+                    );
+                },
+            },
+
+            // COLUNA 3: Plano de Mídia (orçamento)
+            {
+                accessorKey: 'budget',
+                header: 'Plano de Mídia',
+                cell: ({ row }) => (
+                    <span className="font-semibold text-blue-600">
+                        {formatCurrency(row.original.budget)}
+                    </span>
+                ),
+            },
+
+            // COLUNA 4: Período
+            {
+                accessorKey: 'period',
+                header: 'Período',
+                cell: ({ row }) => {
+                    const start = new Date(row.original.start_date).toLocaleDateString('pt-BR');
+                    const end = new Date(row.original.end_date).toLocaleDateString('pt-BR');
+                    return (
+                        <div className="text-sm">
+                            <div>{start}</div>
+                            <div className="text-gray-500">até {end}</div>
+                        </div>
+                    );
+                },
+            },
+
+            // COLUNA 5: Meta % (editável)
+            {
+                accessorKey: 'meta_percentage',
+                header: 'Meta',
+                cell: ({ row }) => {
+                    const campaignId = row.original.id;
+                    const isEditing = editingCell === `${campaignId}-meta_percentage`;
+
+                    if (isEditing) {
+                        return (
+                            <input
+                                type="number"
+                                autoFocus
+                                step="0.1"
+                                min="0"
+                                max="100"
+                                className="w-20 border rounded px-2 py-1 text-sm"
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                onBlur={() => setEditingCell(null)}
+                            />
+                        );
+                    }
+
+                    return (
+                        <div
+                            onClick={() => {
+                                setEditingCell(`${campaignId}-meta_percentage`);
+                                setEditValue(String(row.original.meta_percentage));
+                            }}
+                            className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded"
+                        >
+                            {row.original.meta_percentage}%
+                        </div>
+                    );
+                },
+            },
+
+            // COLUNA 6: Parcial 97% (calculado automaticamente)
+            {
+                id: 'parcial_97',
+                header: 'Parcial 97%',
+                cell: ({ row }) => {
+                    const calc = useCampaignCalculations(
+                        row.original.budget,
+                        row.original.meta_percentage,
+                        row.original.start_date,
+                        row.original.end_date,
+                        row.original.current_spend
+                    );
+
+                    return (
+                        <span className="text-green-600">
+                            {formatCurrency(calc.parcial97)}
+                        </span>
+                    );
+                },
+            },
+
+            // COLUNA 7: Investimento Utilizado (EDITÁVEL - campo principal)
+            {
+                accessorKey: 'current_spend',
+                header: 'Investimento Utilizado',
+                cell: ({ row }) => {
+                    const campaignId = row.original.id;
+                    const isEditing = editingCell === `${campaignId}-current_spend`;
+
+                    if (isEditing) {
+                        return (
+                            <input
+                                type="number"
+                                autoFocus
+                                step="0.01"
+                                min="0"
+                                className="w-32 border-2 border-blue-500 rounded px-2 py-1 text-sm font-semibold"
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                onBlur={() => setEditingCell(null)}
+                                placeholder="R$ 0,00"
+                            />
+                        );
+                    }
+
+                    return (
+                        <div
+                            onClick={() => {
+                                setEditingCell(`${campaignId}-current_spend`);
+                                setEditValue(String(row.original.current_spend));
+                            }}
+                            className="cursor-pointer hover:bg-blue-50 px-2 py-1 rounded border-2 border-transparent hover:border-blue-300 transition-all"
+                        >
+                            <span className="font-bold text-lg">
+                                {formatCurrency(row.original.current_spend)}
+                            </span>
+                        </div>
+                    );
+                },
+            },
+
+            // COLUNA 8: Parcial 100% (calculado)
+            {
+                id: 'parcial_100',
+                header: 'Parcial 100%',
+                cell: ({ row }) => {
+                    const calc = useCampaignCalculations(
+                        row.original.budget,
+                        row.original.meta_percentage,
+                        row.original.start_date,
+                        row.original.end_date,
+                        row.original.current_spend
+                    );
+
+                    return (
+                        <span className="text-blue-600">
+                            {formatCurrency(calc.parcial100)}
+                        </span>
+                    );
+                },
+            },
+
+            // COLUNA 9: % Meta (porcentagem da meta atingida)
+            {
+                id: 'percent_meta',
+                header: '% Meta',
+                cell: ({ row }) => {
+                    const calc = useCampaignCalculations(
+                        row.original.budget,
+                        row.original.meta_percentage,
+                        row.original.start_date,
+                        row.original.end_date,
+                        row.original.current_spend
+                    );
+
+                    return (
+                        <span className="font-semibold">
+                            {formatPercentage(calc.percentMeta)}
+                        </span>
+                    );
+                },
+            },
+
+            // COLUNA 10: Invest./dia 97%
+            {
+                id: 'invest_dia_97',
+                header: 'Invest./dia 97%',
+                cell: ({ row }) => {
+                    const calc = useCampaignCalculations(
+                        row.original.budget,
+                        row.original.meta_percentage,
+                        row.original.start_date,
+                        row.original.end_date,
+                        row.original.current_spend
+                    );
+
+                    if (calc.daysRemaining === 0) {
+                        return <span className="text-gray-400 text-xs">Finalizado</span>;
+                    }
+
+                    return (
+                        <span className="text-sm text-green-700">
+                            {formatCurrency(calc.investDia97)}/dia
+                        </span>
+                    );
+                },
+            },
+
+            // COLUNA 11: Invest./dia 100%
+            {
+                id: 'invest_dia_100',
+                header: 'Invest./dia 100%',
+                cell: ({ row }) => {
+                    const calc = useCampaignCalculations(
+                        row.original.budget,
+                        row.original.meta_percentage,
+                        row.original.start_date,
+                        row.original.end_date,
+                        row.original.current_spend
+                    );
+
+                    if (calc.daysRemaining === 0) {
+                        return <span className="text-gray-400 text-xs">Finalizado</span>;
+                    }
+
+                    return (
+                        <span className="text-sm text-blue-700">
+                            {formatCurrency(calc.investDia100)}/dia
+                        </span>
+                    );
+                },
+            },
+
+            // COLUNA 12: % Gasto Real (badge colorido)
+            {
+                id: 'percent_real_spent',
+                header: '% Gasto Real',
+                cell: ({ row }) => {
+                    const calc = useCampaignCalculations(
+                        row.original.budget,
+                        row.original.meta_percentage,
+                        row.original.start_date,
+                        row.original.end_date,
+                        row.original.current_spend
+                    );
+
+                    return (
+                        <Badge className={calc.spentBadgeColor}>
+                            {formatPercentage(calc.percentRealSpent)}
+                        </Badge>
+                    );
+                },
+            },
+
+            // COLUNA 13: Status (pace)
+            {
+                id: 'status',
+                header: 'Status',
+                cell: ({ row }) => {
+                    const calc = useCampaignCalculations(
+                        row.original.budget,
+                        row.original.meta_percentage,
+                        row.original.start_date,
+                        row.original.end_date,
+                        row.original.current_spend
+                    );
+
+                    const display = getStatusDisplay(calc.status);
+
+                    return (
+                        <Badge className={calc.statusColor}>
+                            {display.icon} {display.text}
+                        </Badge>
+                    );
+                },
+            },
+
+            // COLUNA 14: % Tempo (barra de progresso)
+            {
+                id: 'percent_time',
+                header: '% Tempo',
+                cell: ({ row }) => {
+                    const calc = useCampaignCalculations(
+                        row.original.budget,
+                        row.original.meta_percentage,
+                        row.original.start_date,
+                        row.original.end_date,
+                        row.original.current_spend
+                    );
+
+                    return (
+                        <div className="flex items-center gap-2 min-w-[120px]">
+                            <Progress
+                                value={Math.min(calc.percentTime, 100)}
+                                className="h-2 flex-1"
+                            />
+                            <span className="text-xs font-medium min-w-[40px]">
+                                {calc.percentTime.toFixed(0)}%
+                            </span>
+                        </div>
+                    );
+                },
+            },
+
+            // COLUNA 15: % Budget (barra de progresso)
+            {
+                id: 'percent_budget',
+                header: '% Budget',
+                cell: ({ row }) => {
+                    const calc = useCampaignCalculations(
+                        row.original.budget,
+                        row.original.meta_percentage,
+                        row.original.start_date,
+                        row.original.end_date,
+                        row.original.current_spend
+                    );
+
+                    const color = calc.percentBudget > 110
+                        ? 'bg-red-500'
+                        : calc.percentBudget >= 100
+                            ? 'bg-blue-500'
+                            : 'bg-green-500';
+
+                    return (
+                        <div className="flex items-center gap-2 min-w-[120px]">
+                            <Progress
+                                value={Math.min(calc.percentBudget, 100)}
+                                className={`h-2 flex-1 ${color}`}
+                            />
+                            <span className="text-xs font-medium min-w-[40px]">
+                                {calc.percentBudget.toFixed(0)}%
+                            </span>
+                        </div>
+                    );
+                },
+            },
+
+            // COLUNA 16: Ações (deletar + observações)
+            {
+                id: 'actions',
+                header: 'Ações',
+                cell: ({ row }) => {
+                    return (
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                    setSelectedCampaign(row.original);
+                                    setShowObservationsModal(true);
+                                }}
+                                title="Editar observações"
+                            >
+                                <FileText className="h-4 w-4" />
+                            </Button>
+
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                    if (confirm('Deletar esta campanha?')) {
+                                        onDelete(row.original.id);
+                                    }
+                                }}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                title="Deletar campanha"
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    );
+                },
+            },
+        ],
+        [editingCell, editValue, setEditingCell, setEditValue, handleSave]
+    );
+
+    const table = useReactTable({
+        data: campaigns,
+        columns,
+        getCoreRowModel: getCoreRowModel(),
+    });
+
+    return (
+        <div className="rounded-md border">
+            <div className="overflow-x-auto">
+                <table className="w-full">
+                    <thead>
+                        {table.getHeaderGroups().map((headerGroup) => (
+                            <tr key={headerGroup.id} className="border-b bg-gray-50">
+                                {headerGroup.headers.map((header) => (
+                                    <th
+                                        key={header.id}
+                                        className="px-4 py-3 text-left text-sm font-medium text-gray-700"
+                                    >
+                                        {flexRender(
+                                            header.column.columnDef.header,
+                                            header.getContext()
+                                        )}
+                                    </th>
+                                ))}
+                            </tr>
+                        ))}
+                    </thead>
+                    <tbody>
+                        {table.getRowModel().rows.map((row) => (
+                            <tr key={row.id} className="border-b hover:bg-gray-50">
+                                {row.getVisibleCells().map((cell) => (
+                                    <td key={cell.id} className="px-4 py-3 text-sm">
+                                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                    </td>
+                                ))}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+            <ObservationsModal
+                open={showObservationsModal}
+                onClose={() => {
+                    setShowObservationsModal(false);
+                    setSelectedCampaign(null);
+                }}
+                campaign={selectedCampaign}
+                onSave={async (observations) => {
+                    if (selectedCampaign) {
+                        await onUpdate(selectedCampaign.id, { observations });
+                    }
+                }}
+            />
+        </div>
+    );
+}
