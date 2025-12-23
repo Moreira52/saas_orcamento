@@ -1,5 +1,7 @@
 'use client';
 
+import Image from 'next/image';
+
 import { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -144,12 +146,12 @@ export default function NewCampaignModal({ open, onClose, clientId }: NewCampaig
     };
 
     const channelOptions = [
-        { value: 'meta_ads', label: '📘 Meta Ads', icon: '📘' },
-        { value: 'google_ads', label: '🔴 Google Ads', icon: '🔴' },
-        { value: 'linkedin_ads', label: '💼 LinkedIn Ads', icon: '💼' },
-        { value: 'tiktok_ads', label: '🎵 TikTok Ads', icon: '🎵' },
-        { value: 'pinterest_ads', label: '📌 Pinterest Ads', icon: '📌' },
-        { value: 'other', label: '🌐 Outro Canal', icon: '🌐' },
+        { value: 'meta_ads', label: 'Meta Ads', iconSrc: '/channel-icons/meta-ads.png' },
+        { value: 'google_ads', label: 'Google Ads', iconSrc: '/channel-icons/google-ads.png' },
+        { value: 'linkedin_ads', label: 'LinkedIn Ads', iconSrc: '/channel-icons/linkedin-ads.png' },
+        { value: 'tiktok_ads', label: 'TikTok Ads', iconEmoji: '🎵' },
+        { value: 'pinterest_ads', label: 'Pinterest Ads', iconSrc: '/channel-icons/pinterest-ads.png' },
+        { value: 'other', label: 'Outro Canal', iconEmoji: '🌐' },
     ];
 
     return (
@@ -177,7 +179,23 @@ export default function NewCampaignModal({ open, onClose, clientId }: NewCampaig
                                     <SelectContent>
                                         {channelOptions.map((option) => (
                                             <SelectItem key={option.value} value={option.value}>
-                                                {option.label}
+                                                <div className="flex items-center gap-2">
+                                                    {option.iconSrc ? (
+                                                        <div className="relative w-4 h-4">
+                                                            <Image
+                                                                src={option.iconSrc}
+                                                                alt={option.label}
+                                                                fill
+                                                                className="object-contain"
+                                                            />
+                                                        </div>
+                                                    ) : (
+                                                        <span className="w-4 h-4 flex items-center justify-center text-sm">
+                                                            {option.iconEmoji}
+                                                        </span>
+                                                    )}
+                                                    <span>{option.label}</span>
+                                                </div>
                                             </SelectItem>
                                         ))}
                                     </SelectContent>

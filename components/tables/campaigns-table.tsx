@@ -1,5 +1,7 @@
 'use client';
 
+import Image from 'next/image';
+
 import { useMemo, useState, useEffect } from 'react';
 import {
     useReactTable,
@@ -101,23 +103,48 @@ export default function CampaignsTable({
                 header: 'Canal',
                 cell: ({ row }) => {
                     const channel = row.original.channel;
-                    const icon = getChannelIcon(channel);
-                    const channelNames: Record<string, string> = {
-                        meta_ads: 'Meta Ads',
-                        google_ads: 'Google Ads',
-                        linkedin_ads: 'LinkedIn Ads',
-                        tiktok_ads: 'TikTok Ads',
-                        pinterest_ads: 'Pinterest Ads',
-                        other: 'Outro',
+                    const channelData: Record<string, { label: string; iconSrc?: string; iconEmoji?: string }> = {
+                        meta_ads: { label: 'Meta Ads', iconSrc: '/channel-icons/meta-ads.png' },
+                        google_ads: { label: 'Google Ads', iconSrc: '/channel-icons/google-ads.png' },
+                        linkedin_ads: { label: 'LinkedIn Ads', iconSrc: '/channel-icons/linkedin-ads.png' },
+                        tiktok_ads: { label: 'TikTok Ads', iconEmoji: '🎵' },
+                        pinterest_ads: { label: 'Pinterest Ads', iconSrc: '/channel-icons/pinterest-ads.png' },
+                        other: { label: 'Outro', iconEmoji: '🌐' },
                     };
+
+                    const data = channelData[channel] || channelData.other;
+                    // Split label for better vertical layout like in the mockup (Name on top, Ads details below if needed, or just side by side)
+                    // The user mockup showed "Meta" on one line and "Ads" on another probably, but user just asked to change icons.
+                    // Let's keep it simple side-by-side or stacked if the mockup strongly suggests it. 
+                    // Looking at the mockup: "Meta" (bold) "Ads". It seems to be two lines.
+
+                    const [cName, ...cRest] = data.label.split(' ');
+                    const cSuffix = cRest.join(' ');
 
                     return (
                         <div className="flex items-center gap-2">
-                            <span className="text-lg">{icon}</span>
-                            <span className="font-medium">{channelNames[channel]}</span>
+                            {data.iconSrc ? (
+                                <div className="relative w-8 h-8 flex-shrink-0">
+                                    <Image
+                                        src={data.iconSrc}
+                                        alt={data.label}
+                                        fill
+                                        className="object-contain"
+                                    />
+                                </div>
+                            ) : (
+                                <span className="text-2xl w-8 h-8 flex items-center justify-center">
+                                    {data.iconEmoji}
+                                </span>
+                            )}
+                            <div className="flex flex-col leading-tight">
+                                <span className="font-bold text-gray-900">{cName}</span>
+                                {cSuffix && <span className="text-gray-500 font-medium">{cSuffix}</span>}
+                            </div>
+
                             {row.original.is_multi_month && (
-                                <Badge variant="outline" className="text-xs">
-                                    🔗 Multi-mês
+                                <Badge variant="outline" className="text-xs ml-2">
+                                    Multi-mês
                                 </Badge>
                             )}
                         </div>
@@ -574,39 +601,38 @@ export default function CampaignsTable({
 
     return (
         <>
-            <div className="rounded-md border">
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead>
-                            {table.getHeaderGroups().map((headerGroup) => (
-                                <tr key={headerGroup.id} className="border-b bg-gray-50">
-                                    {headerGroup.headers.map((header) => (
-                                        <th
-                                            key={header.id}
-                                            className="px-4 py-3 text-left text-sm font-medium text-gray-700"
-                                        >
-                                            {flexRender(
-                                                header.column.columnDef.header,
-                                                header.getContext()
-                                            )}
-                                        </th>
-                                    ))}
-                                </tr>
-                            ))}
-                        </thead>
-                        <tbody>
-                            {table.getRowModel().rows.map((row) => (
-                                <tr key={row.id} className="border-b hover:bg-gray-50">
-                                    {row.getVisibleCells().map((cell) => (
-                                        <td key={cell.id} className="px-4 py-3 text-sm">
-                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                        </td>
-                                    ))}
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+            {/* Tabela Limpa sem bordas externas (container pai já tem estilo de card) */}
+            <div className="overflow-x-auto">
+                <table className="w-full">
+                    <thead>
+                        {table.getHeaderGroups().map((headerGroup) => (
+                            <tr key={headerGroup.id} className="border-b border-gray-100">
+                                {headerGroup.headers.map((header) => (
+                                    <th
+                                        key={header.id}
+                                        className="bg-gray-50/50 px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
+                                    >
+                                        {flexRender(
+                                            header.column.columnDef.header,
+                                            header.getContext()
+                                        )}
+                                    </th>
+                                ))}
+                            </tr>
+                        ))}
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                        {table.getRowModel().rows.map((row) => (
+                            <tr key={row.id} className="hover:bg-gray-50/50 transition-colors">
+                                {row.getVisibleCells().map((cell) => (
+                                    <td key={cell.id} className="px-4 py-3 text-sm text-gray-700">
+                                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                    </td>
+                                ))}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
             </div>
 
             <ObservationsModal

@@ -17,6 +17,8 @@ import NewClientModal from '@/components/modals/new-client-modal';
 import NewCampaignModal from '@/components/modals/new-campaign-modal';
 import DeleteClientModal from '@/components/modals/delete-client-modal';
 import { Toaster } from '@/components/ui/sonner';
+import { MetricCards } from '@/components/dashboard/metric-cards';
+import { startOfMonth, endOfMonth, differenceInDays, isPast, isFuture } from 'date-fns';
 
 export default function HomePage() {
   const [selectedMonth, setSelectedMonth] = useState(() => {
@@ -142,6 +144,27 @@ export default function HomePage() {
       investDia100: 0,
     }
   );
+
+  // Calcular progresso do mês
+  const [year, month] = selectedMonth.split('-').map(Number);
+  const startOfSelectedMonth = new Date(year, month - 1, 1);
+  const endOfSelectedMonth = new Date(year, month, 0); // Último dia do mês
+  const today = new Date();
+
+  let monthProgress = 0;
+  if (isPast(endOfSelectedMonth)) {
+    monthProgress = 100;
+  } else if (isFuture(startOfSelectedMonth)) {
+    monthProgress = 0;
+  } else {
+    const totalDays = differenceInDays(endOfSelectedMonth, startOfSelectedMonth) + 1;
+    const daysPassed = differenceInDays(today, startOfSelectedMonth) + 1;
+    monthProgress = (daysPassed / totalDays) * 100;
+  }
+
+  const percentMetaTotal = totals.parcial97 > 0
+    ? (totals.currentSpend / totals.parcial97) * 100
+    : 0;
 
   const activeClient = clients.find((c) => c.id === activeClientId);
 
@@ -285,49 +308,25 @@ export default function HomePage() {
                 </div>
               ) : (
                 <>
-                  <CampaignsTable
-                    campaigns={campaigns}
-                    onUpdate={async (id, data) => {
-                      await updateCampaign.mutateAsync({ id, data });
-                    }}
-                    onDelete={async (id) => {
-                      await deleteCampaign.mutateAsync(id);
-                    }}
-                  />
+                  <div className="mb-6">
+                    <MetricCards
+                      totalBudget={totals.budget}
+                      totalSpend={totals.currentSpend}
+                      percentMeta={percentMetaTotal}
+                      monthProgress={monthProgress}
+                    />
+                  </div>
 
-                  {/* Linha TOTAL */}
-                  <div className="bg-yellow-50 border-t-2 border-yellow-300 p-4">
-                    <div className="grid grid-cols-6 gap-4 font-bold text-sm">
-                      <div>
-                        <div className="text-gray-600 text-xs mb-1">TOTAL</div>
-                        <div className="text-lg">{campaigns.length} campanhas</div>
-                      </div>
-                      <div>
-                        <div className="text-gray-600 text-xs mb-1">Plano Total</div>
-                        <div className="text-blue-600">{formatCurrency(totals.budget)}</div>
-                      </div>
-                      <div>
-                        <div className="text-gray-600 text-xs mb-1">Parcial 97%</div>
-                        <div className="text-green-600">{formatCurrency(totals.parcial97)}</div>
-                      </div>
-                      <div>
-                        <div className="text-gray-600 text-xs mb-1">Investido</div>
-                        <div className="text-lg">{formatCurrency(totals.currentSpend)}</div>
-                      </div>
-                      <div>
-                        <div className="text-gray-600 text-xs mb-1">Invest./dia 97%</div>
-                        <div className="text-green-600">{formatCurrency(totals.investDia97)}</div>
-                      </div>
-                      <div>
-                        <div className="text-gray-600 text-xs mb-1">% da Meta</div>
-                        <div>
-                          {totals.parcial97 > 0
-                            ? ((totals.currentSpend / totals.parcial97) * 100).toFixed(1)
-                            : 0}
-                          %
-                        </div>
-                      </div>
-                    </div>
+                  <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+                    <CampaignsTable
+                      campaigns={campaigns}
+                      onUpdate={async (id, data) => {
+                        await updateCampaign.mutateAsync({ id, data });
+                      }}
+                      onDelete={async (id) => {
+                        await deleteCampaign.mutateAsync(id);
+                      }}
+                    />
                   </div>
                 </>
               )}
