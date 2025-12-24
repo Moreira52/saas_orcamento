@@ -149,7 +149,7 @@ export default function NewCampaignModal({ open, onClose, clientId }: NewCampaig
         { value: 'meta_ads', label: 'Meta Ads', iconSrc: '/channel-icons/meta-ads.png' },
         { value: 'google_ads', label: 'Google Ads', iconSrc: '/channel-icons/google-ads.png' },
         { value: 'linkedin_ads', label: 'LinkedIn Ads', iconSrc: '/channel-icons/linkedin-ads.png' },
-        { value: 'tiktok_ads', label: 'TikTok Ads', iconEmoji: '🎵' },
+        { value: 'tiktok_ads', label: 'TikTok Ads', iconSrc: '/channel-icons/tiktok-ads.png' },
         { value: 'pinterest_ads', label: 'Pinterest Ads', iconSrc: '/channel-icons/pinterest-ads.png' },
         { value: 'other', label: 'Outro Canal', iconEmoji: '🌐' },
     ];

@@ -64,7 +64,12 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        if (new Date(end_date) < new Date(start_date)) {
+        const parseToLocalDate = (dateStr: string) => {
+            const [y, m, d] = dateStr.split('-').map(Number);
+            return new Date(y, m - 1, d);
+        };
+
+        if (parseToLocalDate(end_date) < parseToLocalDate(start_date)) {
             return NextResponse.json(
                 { success: false, error: 'Data final deve ser >= data inicial' },
                 { status: 400 }
@@ -76,8 +81,8 @@ export async function POST(request: NextRequest) {
         }
 
         // Verificar se campanha cruza meses
-        const startMonth = format(new Date(start_date), 'yyyy-MM');
-        const endMonth = format(new Date(end_date), 'yyyy-MM');
+        const startMonth = format(parseToLocalDate(start_date), 'yyyy-MM');
+        const endMonth = format(parseToLocalDate(end_date), 'yyyy-MM');
         const isMultiMonth = startMonth !== endMonth;
 
         if (!isMultiMonth) {
@@ -113,10 +118,10 @@ export async function POST(request: NextRequest) {
         }
 
         // Campanha multi-mês: calcular proporções
-        const totalDays = differenceInDays(new Date(end_date), new Date(start_date)) + 1;
+        const totalDays = differenceInDays(parseToLocalDate(end_date), parseToLocalDate(start_date)) + 1;
         const months = eachMonthOfInterval({
-            start: new Date(start_date),
-            end: new Date(end_date),
+            start: parseToLocalDate(start_date),
+            end: parseToLocalDate(end_date),
         });
 
         const campaignsToInsert: any[] = [];
@@ -127,8 +132,8 @@ export async function POST(request: NextRequest) {
             const monthEnd = endOfMonth(month);
 
             // Calcular período efetivo dentro do mês
-            const effectiveStart = new Date(start_date) > monthStart ? new Date(start_date) : monthStart;
-            const effectiveEnd = new Date(end_date) < monthEnd ? new Date(end_date) : monthEnd;
+            const effectiveStart = parseToLocalDate(start_date) > monthStart ? parseToLocalDate(start_date) : monthStart;
+            const effectiveEnd = parseToLocalDate(end_date) < monthEnd ? parseToLocalDate(end_date) : monthEnd;
             const daysInMonth = differenceInDays(effectiveEnd, effectiveStart) + 1;
 
             // Calcular orçamento proporcional

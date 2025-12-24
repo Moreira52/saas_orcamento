@@ -35,6 +35,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { ClientSwitcher } from './client-switcher';
 
 interface StitchDashboardProps {
     clients: Client[];
@@ -57,6 +58,8 @@ interface StitchDashboardProps {
     onNewClient: () => void;
     onUpdateCampaign: (id: string, data: Partial<Campaign>) => Promise<void>;
     onDeleteCampaign: (id: string) => Promise<void>;
+    onDeleteClient: (client: Client) => void;
+    onEditClient: (client: Client) => void;
 }
 
 export default function StitchDashboard({
@@ -72,7 +75,9 @@ export default function StitchDashboard({
     onMonthChange,
     onNewClient,
     onUpdateCampaign,
-    onDeleteCampaign
+    onDeleteCampaign,
+    onDeleteClient,
+    onEditClient
 }: StitchDashboardProps) {
     const activeClient = clients.find(c => c.id === activeClientId);
 
@@ -163,18 +168,11 @@ export default function StitchDashboard({
                                 Nova Campanha
                             </button>
 
-                            <Select value={activeClientId || ''} onValueChange={setActiveClientId}>
-                                <SelectTrigger className="w-[200px] h-[46px] rounded-full border-border-light bg-card-light text-text-primary-light font-medium focus:ring-accent-primary">
-                                    <SelectValue placeholder="Selecione o Cliente" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {clients.map((client) => (
-                                        <SelectItem key={client.id} value={client.id}>
-                                            {client.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <ClientSwitcher
+                                clients={clients}
+                                activeClientId={activeClientId}
+                                onChange={setActiveClientId}
+                            />
 
                             <button
                                 onClick={onNewClient}
@@ -211,7 +209,24 @@ export default function StitchDashboard({
                             <h2 className="text-3xl font-bold uppercase tracking-wide text-text-primary-light">Budget Overview</h2>
                         </div>
                         <div className="flex items-center gap-3">
-                            {/* Actions moved to header as requested */}
+                            {activeClient && (
+                                <>
+                                    <button
+                                        onClick={() => onEditClient(activeClient)}
+                                        className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-text-muted-light hover:text-text-primary-light hover:bg-card-hover-light rounded-lg transition-colors"
+                                    >
+                                        <FileText className="h-4 w-4" />
+                                        Editar Cliente
+                                    </button>
+                                    <button
+                                        onClick={() => onDeleteClient(activeClient)}
+                                        className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                        Excluir Cliente
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
 
@@ -221,7 +236,6 @@ export default function StitchDashboard({
                         <div className="bg-card-light rounded-3xl p-6 border border-border-light relative overflow-hidden group hover:border-border-dark-hover transition-all">
                             <div className="flex justify-between items-start mb-6 z-10 relative">
                                 <span className="text-text-muted-light font-medium tracking-wider text-xs uppercase">Plano Total</span>
-                                <MoreHorizontal className="text-text-muted-light h-5 w-5" />
                             </div>
                             <div className="flex items-end gap-2 mb-2 z-10 relative">
                                 <h3 className="text-3xl font-bold text-text-primary-light">{formatCurrency(totals.budget)}</h3>
@@ -245,7 +259,6 @@ export default function StitchDashboard({
                         <div className="bg-card-light rounded-3xl p-6 border border-border-light relative overflow-hidden group hover:border-border-dark-hover transition-all">
                             <div className="flex justify-between items-start mb-6">
                                 <span className="text-text-muted-light font-medium tracking-wider text-xs uppercase">Investido</span>
-                                <MoreHorizontal className="text-text-muted-light h-5 w-5" />
                             </div>
                             <div className="flex items-baseline gap-3 mb-1">
                                 <h3 className="text-3xl font-bold text-text-primary-light">{formatCurrency(totals.currentSpend)}</h3>
@@ -265,7 +278,6 @@ export default function StitchDashboard({
                         <div className="bg-card-light rounded-3xl p-6 border border-border-light relative overflow-hidden group hover:border-border-dark-hover transition-all">
                             <div className="flex justify-between items-start mb-4">
                                 <span className="text-text-muted-light font-medium tracking-wider text-xs uppercase">% da Meta</span>
-                                <MoreHorizontal className="text-text-muted-light h-5 w-5" />
                             </div>
                             <div className="flex flex-col items-center justify-center h-24 relative">
                                 <svg className="w-20 h-20 transform -rotate-90">
@@ -292,7 +304,6 @@ export default function StitchDashboard({
                         <div className="bg-card-light rounded-3xl p-6 border border-border-light relative overflow-hidden group hover:border-border-dark-hover transition-all">
                             <div className="flex justify-between items-start mb-6">
                                 <span className="text-text-muted-light font-medium tracking-wider text-xs uppercase">Avanço do Mês</span>
-                                <MoreHorizontal className="text-text-muted-light h-5 w-5" />
                             </div>
                             <h3 className="text-3xl font-bold text-text-primary-light mb-2">{monthProgress.toFixed(1)}%</h3>
                             <div className="w-full bg-element-light rounded-full h-2 mb-2 overflow-hidden">
@@ -402,7 +413,17 @@ export default function StitchDashboard({
                                                 {/* PERÍODO */}
                                                 <td className="py-4 px-3 align-middle">
                                                     <span className="text-xs text-text-muted-light whitespace-nowrap">
-                                                        {new Date(campaign.start_date).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }).replace(' de ', ' ').replace('.', '')} - {new Date(campaign.end_date).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }).replace(' de ', ' ').replace('.', '')}
+                                                        {(() => {
+                                                            const formatDate = (dateStr: string) => {
+                                                                if (!dateStr) return '-';
+                                                                const [y, m, d] = dateStr.split('T')[0].split('-').map(Number);
+                                                                // Force Local Date construction:
+                                                                const localDate = new Date(y, m - 1, d);
+                                                                return localDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })
+                                                                    .replace(' de ', ' ').replace('.', '');
+                                                            };
+                                                            return `${formatDate(campaign.start_date)} - ${formatDate(campaign.end_date)}`;
+                                                        })()}
                                                     </span>
                                                 </td>
 

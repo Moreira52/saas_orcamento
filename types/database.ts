@@ -30,6 +30,7 @@ export interface Client {
     last_updated_at: string;
     created_at: string;
     deleted_at: string | null;
+    display_order: number | null;
 }
 
 // Estrutura da tabela campaigns

@@ -14,6 +14,7 @@ import { ptBR } from 'date-fns/locale';
 import { formatCurrency } from '@/lib/utils';
 import { useCampaignCalculations } from '@/lib/hooks/use-campaign-calculations';
 import NewClientModal from '@/components/modals/new-client-modal';
+import EditClientModal from '@/components/modals/edit-client-modal';
 import NewCampaignModal from '@/components/modals/new-campaign-modal';
 import DeleteClientModal from '@/components/modals/delete-client-modal';
 import { Toaster } from '@/components/ui/sonner';
@@ -30,7 +31,9 @@ export default function HomePage() {
   const [showNewClientModal, setShowNewClientModal] = useState(false);
   const [showNewCampaignModal, setShowNewCampaignModal] = useState(false);
   const [showDeleteClientModal, setShowDeleteClientModal] = useState(false);
+  const [showEditClientModal, setShowEditClientModal] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
+  const [clientToEdit, setClientToEdit] = useState<Client | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -217,12 +220,31 @@ export default function HomePage() {
         onDeleteCampaign={async (id) => {
           await deleteCampaign.mutateAsync(id);
         }}
+        onDeleteClient={(client) => {
+          setClientToDelete(client);
+          setShowDeleteClientModal(true);
+        }}
+        onEditClient={(client) => {
+          setClientToEdit(client);
+          setShowEditClientModal(true);
+        }}
       />
 
       <NewClientModal
         open={showNewClientModal}
         onClose={() => setShowNewClientModal(false)}
       />
+
+      {clientToEdit && (
+        <EditClientModal
+          open={showEditClientModal}
+          onClose={() => {
+            setShowEditClientModal(false);
+            setClientToEdit(null);
+          }}
+          client={clientToEdit}
+        />
+      )}
 
       {activeClientId && (
         <NewCampaignModal

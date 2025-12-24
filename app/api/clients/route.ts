@@ -8,7 +8,9 @@ export async function GET() {
             .from('clients')                        // Tabela clients
             .select('*')                            // Buscar todas as colunas
             .is('deleted_at', null)                 // Apenas clientes ativos (soft delete)
-            .order('created_at', { ascending: false }); // Mais novos primeiro
+            .order('display_order', { ascending: true, nullsFirst: false }) // Prioriza ordem manual
+            .order('created_at', { ascending: false }); // Desempate por mais novos
+
 
         // Se Supabase retornou erro
         if (error) {

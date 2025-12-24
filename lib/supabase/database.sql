@@ -29,7 +29,8 @@ CREATE TABLE clients (
   analyst_id UUID REFERENCES users(id), -- Quem criou este cliente
   last_updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(), -- Badge "Atualizado há X horas"
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  deleted_at TIMESTAMP WITH TIME ZONE -- Soft delete (não deletar fisicamente)
+  deleted_at TIMESTAMP WITH TIME ZONE, -- Soft delete (não deletar fisicamente)
+  display_order INTEGER -- Ordem de exibição personalizada
 );
 
 -- Tabela de campanhas (coração do sistema)
@@ -69,3 +70,7 @@ COMMENT ON TABLE campaigns IS 'Armazena campanhas de tráfego pago com cálculos
 COMMENT ON COLUMN campaigns.month_year IS 'Formato: YYYY-MM para filtrar campanhas por mês';
 COMMENT ON COLUMN campaigns.parent_campaign_id IS 'NULL para campanhas normais, aponta para campanha "mãe" se for multi-mês';
 COMMENT ON COLUMN clients.logo_url IS 'Logo em Base64 (PNG/JPG) ou URL externa';
+
+-- UPDATE 2025-12-24: Adicionar ordenação
+-- Executar caso a tabela já exista:
+-- ALTER TABLE clients ADD COLUMN display_order INTEGER;

@@ -107,7 +107,7 @@ export default function CampaignsTable({
                         meta_ads: { label: 'Meta Ads', iconSrc: '/channel-icons/meta-ads.png' },
                         google_ads: { label: 'Google Ads', iconSrc: '/channel-icons/google-ads.png' },
                         linkedin_ads: { label: 'LinkedIn Ads', iconSrc: '/channel-icons/linkedin-ads.png' },
-                        tiktok_ads: { label: 'TikTok Ads', iconEmoji: '🎵' },
+                        tiktok_ads: { label: 'TikTok Ads', iconSrc: '/channel-icons/tiktok-ads.png' },
                         pinterest_ads: { label: 'Pinterest Ads', iconSrc: '/channel-icons/pinterest-ads.png' },
                         other: { label: 'Outro', iconEmoji: '🌐' },
                     };
@@ -217,8 +217,17 @@ export default function CampaignsTable({
                 accessorKey: 'period',
                 header: 'Período',
                 cell: ({ row }) => {
-                    const start = new Date(row.original.start_date).toLocaleDateString('pt-BR');
-                    const end = new Date(row.original.end_date).toLocaleDateString('pt-BR');
+                    // Fix timezone offset: manually parse YYYY-MM-DD to local midnight
+                    const formatDate = (dateString: string) => {
+                        if (!dateString) return '-';
+                        const [year, month, day] = dateString.split('-').map(Number);
+                        const date = new Date(year, month - 1, day);
+                        return date.toLocaleDateString('pt-BR');
+                    };
+
+                    const start = formatDate(row.original.start_date);
+                    const end = formatDate(row.original.end_date);
+
                     return (
                         <div className="text-sm">
                             <div>{start}</div>

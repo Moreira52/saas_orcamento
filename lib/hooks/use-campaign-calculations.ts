@@ -24,9 +24,18 @@ export function useCampaignCalculations(
     endDate: string,
     currentSpend: number
 ): CampaignCalculations {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    // Fix timezone: parse as local dates explicitly
+    const parseDate = (str: string) => {
+        const [y, m, d] = str.split('-').map(Number);
+        return new Date(y, m - 1, d);
+    };
+
+    const start = parseDate(startDate);
+    const end = parseDate(endDate);
+
+    // Normalize today to midnight for fair comparison
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     const totalDays = differenceInDays(end, start) + 1;
 
