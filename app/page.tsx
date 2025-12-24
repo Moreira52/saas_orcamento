@@ -19,6 +19,7 @@ import DeleteClientModal from '@/components/modals/delete-client-modal';
 import { Toaster } from '@/components/ui/sonner';
 import { MetricCards } from '@/components/dashboard/metric-cards';
 import { startOfMonth, endOfMonth, differenceInDays, isPast, isFuture } from 'date-fns';
+import StitchDashboard from '@/components/dashboard/stitch-dashboard';
 
 export default function HomePage() {
   const [selectedMonth, setSelectedMonth] = useState(() => {
@@ -197,143 +198,26 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b sticky top-0 z-10">
-        <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900">
-              Budget Tracker - Tráfego Pago
-            </h1>
-            <div className="flex items-center gap-4">
-              <MonthYearPicker
-                value={selectedMonth}
-                onChange={setSelectedMonth}
-              />
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <div className="bg-white border-b">
-        <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8">
-          <Tabs value={activeClientId || ''} onValueChange={setActiveClientId}>
-            <div className="flex items-center gap-2">
-              <TabsList className="flex-1 overflow-x-auto">
-                {clients.map((client) => (
-                  <TabsTrigger
-                    key={client.id}
-                    value={client.id}
-                    className="gap-2 group relative pr-8"
-                  >
-                    {/* Logo (se existir) */}
-                    {client.logo_url && (
-                      <img
-                        src={client.logo_url}
-                        alt={client.name}
-                        className="h-5 w-5 object-contain rounded"
-                      />
-                    )}
-                    {/* Nome do cliente */}
-                    <span>{client.name}</span>
-
-                    {/* Botão de deletar (aparece ao hover) */}
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setClientToDelete(client);
-                        setShowDeleteClientModal(true);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.stopPropagation();
-                          setClientToDelete(client);
-                          setShowDeleteClientModal(true);
-                        }
-                      }}
-                      className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-full transition-all"
-                      title="Deletar cliente"
-                    >
-                      <X className="h-3 w-3" />
-                    </span>
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowNewClientModal(true)}
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                Novo Cliente
-              </Button>
-            </div>
-          </Tabs>
-        </div>
-      </div>
-
-      {/* Conteúdo Principal */}
-      <main className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {activeClient && (
-          <div className="space-y-4">
-            {/* Badge de última atualização */}
-            <div className="flex items-center justify-between">
-              <Button onClick={() => setShowNewCampaignModal(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Nova Campanha
-              </Button>
-
-              <Badge variant="outline" className="gap-2">
-                <Clock className="h-3 w-3" />
-                Atualizado{' '}
-                {formatDistanceToNow(new Date(activeClient.last_updated_at), {
-                  addSuffix: true,
-                  locale: ptBR,
-                })}
-              </Badge>
-            </div>
-
-            {/* Tabela de Campanhas */}
-            <div className="bg-white rounded-lg shadow">
-              {loadingCampaigns ? (
-                <div className="p-8 text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                  <p className="text-gray-600 text-sm">Carregando campanhas...</p>
-                </div>
-              ) : campaigns.length === 0 ? (
-                <div className="p-8 text-center">
-                  <p className="text-gray-600">Nenhuma campanha neste mês</p>
-                </div>
-              ) : (
-                <>
-                  <div className="mb-6">
-                    <MetricCards
-                      totalBudget={totals.budget}
-                      totalSpend={totals.currentSpend}
-                      percentMeta={percentMetaTotal}
-                      monthProgress={monthProgress}
-                    />
-                  </div>
-
-                  <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-                    <CampaignsTable
-                      campaigns={campaigns}
-                      onUpdate={async (id, data) => {
-                        await updateCampaign.mutateAsync({ id, data });
-                      }}
-                      onDelete={async (id) => {
-                        await deleteCampaign.mutateAsync(id);
-                      }}
-                    />
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        )}
-      </main>
+    <>
+      <StitchDashboard
+        clients={clients}
+        activeClientId={activeClientId}
+        setActiveClientId={setActiveClientId}
+        campaigns={campaigns}
+        totals={totals}
+        monthProgress={monthProgress}
+        percentMetaTotal={percentMetaTotal}
+        onNewCampaign={() => setShowNewCampaignModal(true)}
+        selectedMonth={selectedMonth}
+        onMonthChange={setSelectedMonth}
+        onNewClient={() => setShowNewClientModal(true)}
+        onUpdateCampaign={async (id, data) => {
+          await updateCampaign.mutateAsync({ id, data });
+        }}
+        onDeleteCampaign={async (id) => {
+          await deleteCampaign.mutateAsync(id);
+        }}
+      />
 
       <NewClientModal
         open={showNewClientModal}
@@ -359,8 +243,7 @@ export default function HomePage() {
           await deleteClient.mutateAsync(clientId);
         }}
       />
-
       <Toaster />
-    </div>
+    </>
   );
 }
