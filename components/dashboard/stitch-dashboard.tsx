@@ -163,24 +163,28 @@ export default function StitchDashboard({
     return (
         <div className="bg-bg-light min-h-screen font-sans text-text-primary-light">
             {/* Header */}
-            <header className="sticky top-0 z-30 pt-6 pb-2 px-6 bg-card-light/90 backdrop-blur-sm shadow-[0_2px_10px_rgba(0,0,0,0.05)]">
-                <div className="max-w-[1920px] mx-auto flex items-center justify-between">
-                    <div className="flex items-center gap-12">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-text-primary-light rounded-full flex items-center justify-center text-white">
+            <header className="sticky top-0 z-30 py-4 px-6 bg-card-light/90 backdrop-blur-sm border-b border-border-light shadow-sm">
+                <div className="max-w-[1920px] mx-auto flex items-center justify-between gap-4">
+
+                    {/* LEFT: Identity & Context Controls */}
+                    <div className="flex items-center gap-6">
+                        {/* Logo */}
+                        <div className="flex items-center gap-3 select-none cursor-pointer" onClick={() => setActiveClientId('')}>
+                            <div className="w-10 h-10 bg-text-primary-light rounded-xl flex items-center justify-center text-white shadow-md">
                                 <LayoutDashboard className="h-6 w-6" />
                             </div>
-                            <h1 className="text-2xl font-bold tracking-tight text-text-primary-light uppercase">Budget Box</h1>
+                            <h1 className="text-xl font-bold tracking-tight text-text-primary-light uppercase hidden xl:block">Budget Box</h1>
                         </div>
-                    </div>
 
-                    {/* All Right Side Items */}
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2">
+                        {/* Divider */}
+                        <div className="h-8 w-px bg-border-light hidden md:block"></div>
+
+                        {/* Global Filters */}
+                        <div className="flex items-center gap-3">
                             {/* ADMIN FILTER */}
                             {(userRole === 'admin' || userRole === 'pm') && (
                                 <Select value={selectedAnalystId} onValueChange={onSelectAnalyst}>
-                                    <SelectTrigger className="w-[180px] h-[46px] rounded-full border-border-light bg-card-light text-text-primary-light font-medium hover:bg-card-hover-light focus:ring-accent-primary shadow-sm">
+                                    <SelectTrigger className="w-[180px] h-11 rounded-full border-border-light bg-white text-text-primary-light font-medium hover:bg-gray-50 focus:ring-accent-primary shadow-sm transition-all">
                                         <SelectValue placeholder="Filtrar por Responsável" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -195,87 +199,107 @@ export default function StitchDashboard({
                             )}
 
                             <MonthYearPicker
-                                className="w-[200px] h-[46px] rounded-full border-border-light bg-card-light text-text-primary-light font-medium hover:bg-card-hover-light focus:ring-accent-primary transition-all shadow-sm relative z-10 cursor-pointer"
+                                className="w-[170px] h-11 rounded-full border-border-light bg-white text-text-primary-light font-medium hover:bg-gray-50 focus:ring-accent-primary transition-all shadow-sm cursor-pointer"
                                 value={selectedMonth}
                                 onChange={onMonthChange}
                             />
                         </div>
+                    </div>
 
-                        <div className="h-8 w-px bg-border-light mx-2"></div>
+                    {/* RIGHT: Actions & User */}
+                    <div className="flex items-center gap-4 sm:gap-6">
 
-                        <div className="flex items-center gap-3">
-                            <button
-                                onClick={onNewCampaign}
-                                className="flex items-center gap-2 px-5 py-2.5 bg-accent-primary text-black rounded-full font-semibold hover:bg-[#B2E030] transition-colors shadow-[0_0_15px_rgba(195,245,59,0.3)]">
-                                <Plus className="h-5 w-5" />
-                                Nova Campanha
-                            </button>
-
+                        {/* Client Context - Highly Visible */}
+                        <div className="hidden sm:block">
                             <ClientSwitcher
                                 clients={clients}
                                 activeClientId={activeClientId}
                                 onChange={setActiveClientId}
                             />
-
-                            <button
-                                onClick={onNewClient}
-                                className="w-[46px] h-[46px] rounded-full bg-card-light border border-border-light flex items-center justify-center text-text-muted-light hover:text-black hover:border-black transition-colors"
-                                title="Novo Cliente"
-                            >
-                                <UserPlus className="h-5 w-5" />
-                            </button>
                         </div>
 
-                        <div className="h-8 w-px bg-border-light mx-2"></div>
+                        {/* Divider - Separate Context from Actions */}
+                        <div className="h-8 w-px bg-border-light hidden sm:block"></div>
 
-                        <button className="w-10 h-10 rounded-full bg-element-light hover:bg-element-hover-light border border-border-light flex items-center justify-center text-text-primary-light transition-colors">
-                            <Bell className="h-5 w-5" />
-                        </button>
-                        <div className="pl-2">
+                        {/* Primary Actions */}
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={onNewCampaign}
+                                className="flex items-center gap-2 px-6 h-11 bg-accent-primary text-black rounded-full font-bold hover:bg-[#B2E030] hover:scale-105 active:scale-95 transition-all shadow-[0_4px_14px_rgba(195,245,59,0.3)]">
+                                <Plus className="h-5 w-5" />
+                                <span className="hidden lg:inline">Nova Campanha</span>
+                            </button>
+
+                            {(userRole === 'admin' || userRole === 'pm') && (
+                                <button
+                                    onClick={onNewClient}
+                                    className="w-11 h-11 rounded-full bg-white border border-border-light flex items-center justify-center text-text-muted-light hover:text-accent-primary hover:border-accent-primary hover:bg-gray-50 transition-all shadow-sm"
+                                    title="Novo Cliente"
+                                >
+                                    <UserPlus className="h-5 w-5" />
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Divider */}
+                        <div className="h-8 w-px bg-border-light hidden sm:block"></div>
+
+                        {/* System & Profile */}
+                        <div className="flex items-center gap-4">
+                            <button className="w-11 h-11 rounded-full bg-white border border-border-light flex items-center justify-center text-text-muted-light hover:text-black hover:bg-gray-50 transition-colors shadow-sm relative">
+                                <Bell className="h-5 w-5" />
+                                <span className="absolute top-3 right-3 block h-2 w-2 rounded-full ring-2 ring-white bg-red-500"></span>
+                            </button>
+
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <button className="flex items-center gap-3 hover:bg-card-hover-light p-2 rounded-full transition-colors outline-none focus:ring-2 focus:ring-accent-primary group">
-                                        <div className="text-right hidden sm:block">
-                                            <p className="text-sm font-bold text-text-primary-light group-hover:text-black transition-colors">
+                                    <button className="flex items-center gap-3 pl-1 pr-2 py-1 rounded-full hover:bg-gray-100/50 transition-colors outline-none group">
+                                        <div className="text-right hidden md:block">
+                                            <p className="text-sm font-bold text-text-primary-light group-hover:text-black transition-colors leading-tight">
                                                 {currentUser?.name || 'Usuário'}
                                             </p>
-                                            <p className="text-xs text-text-muted-light group-hover:text-gray-600 transition-colors">
+                                            <p className="text-[11px] text-text-muted-light group-hover:text-gray-600 transition-colors font-medium">
                                                 {currentUser?.role === 'admin' ? 'Admin' :
-                                                    currentUser?.role === 'pm' ? 'Gestor de Projeto' : 'Analista'}
+                                                    currentUser?.role === 'pm' ? 'Gestor' : 'Analista'}
                                             </p>
                                         </div>
-                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-200 to-gray-400 overflow-hidden border border-gray-300 relative group-hover:border-accent-primary transition-colors">
-                                            {currentUser?.avatar_url ? (
-                                                <Image src={currentUser.avatar_url} alt="Profile" fill className="object-cover" />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center bg-gray-300 text-gray-600 font-bold">
-                                                    {currentUser?.name
-                                                        ? currentUser.name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
-                                                        : 'U'}
-                                                </div>
-                                            )}
+                                        <div className="w-11 h-11 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 p-0.5 shadow-sm group-hover:shadow-md transition-all">
+                                            <div className="w-full h-full rounded-full overflow-hidden relative bg-white">
+                                                {currentUser?.avatar_url ? (
+                                                    <Image src={currentUser.avatar_url} alt="Profile" fill className="object-cover" />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center text-gray-400 font-bold bg-gray-50">
+                                                        {currentUser?.name
+                                                            ? currentUser.name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
+                                                            : 'U'}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-56 bg-white border border-border-light shadow-lg rounded-xl p-2">
-                                    <DropdownMenuLabel className="font-normal">
+                                <DropdownMenuContent align="end" className="w-56 bg-white border border-border-light shadow-xl rounded-2xl p-2 mt-2">
+                                    <DropdownMenuLabel className="font-normal px-2 py-2">
                                         <div className="flex flex-col space-y-1">
-                                            <p className="text-sm font-medium leading-none text-black">{currentUser?.name}</p>
-                                            <p className="text-xs leading-none text-muted-foreground text-gray-500">{currentUser?.email}</p>
+                                            <p className="text-sm font-bold leading-none text-black">{currentUser?.name}</p>
+                                            <p className="text-xs leading-none text-gray-500">{currentUser?.email}</p>
                                         </div>
                                     </DropdownMenuLabel>
-                                    <DropdownMenuSeparator className="bg-gray-100" />
-                                    <DropdownMenuItem className="cursor-pointer rounded-lg px-2 py-2 hover:bg-gray-100 transition-colors" asChild>
-                                        <a href="/profile" className="flex items-center text-text-primary-light">
-                                            <div className="mr-2 h-4 w-4 flex items-center justify-center">
+                                    <DropdownMenuSeparator className="bg-gray-100 my-1" />
+                                    <DropdownMenuItem className="cursor-pointer rounded-xl px-3 py-2.5 hover:bg-gray-50 focus:bg-gray-50 transition-colors text-gray-700" asChild>
+                                        <a href="/profile" className="flex items-center gap-2">
+                                            <div className="h-8 w-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
                                                 <UserPlus className="h-4 w-4" />
                                             </div>
-                                            <span>Meu Perfil</span>
+                                            <span className="font-medium">Meu Perfil</span>
                                         </a>
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem className="text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer rounded-lg px-2 py-2" onClick={onLogout}>
-                                        <LogOut className="mr-2 h-4 w-4" />
-                                        <span>Sair</span>
+                                    <DropdownMenuSeparator className="bg-gray-100 my-1" />
+                                    <DropdownMenuItem className="text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer rounded-xl px-3 py-2.5 flex items-center gap-2 font-medium" onClick={onLogout}>
+                                        <div className="h-8 w-8 rounded-full bg-red-50 flex items-center justify-center">
+                                            <LogOut className="h-4 w-4" />
+                                        </div>
+                                        <span>Sair da conta</span>
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
