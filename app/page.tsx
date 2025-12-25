@@ -1,14 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase/client'; // CLIENT Side
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import MonthYearPicker from '@/components/ui/month-year-picker';
 import CampaignsTable from '@/components/tables/campaigns-table';
 import { Client, Campaign } from '@/types/database';
-import { Plus, Clock, X } from 'lucide-react';
+import { Plus, Clock, X, LogOut } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatCurrency } from '@/lib/utils';
@@ -21,8 +23,17 @@ import { Toaster } from '@/components/ui/sonner';
 import { MetricCards } from '@/components/dashboard/metric-cards';
 import { startOfMonth, endOfMonth, differenceInDays, isPast, isFuture } from 'date-fns';
 import StitchDashboard from '@/components/dashboard/stitch-dashboard';
+import { toast } from 'sonner';
 
 export default function HomePage() {
+  const router = useRouter();
+  const [sessionLoading, setSessionLoading] = useState(true);
+  const [userRole, setUserRole] = useState<'admin' | 'analyst' | 'pm' | null>(null);
+
+  // States for Admin Filter
+  const [analysts, setAnalysts] = useState<any[]>([]);
+  const [selectedAnalystId, setSelectedAnalystId] = useState<string>('all');
+
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -37,24 +48,71 @@ export default function HomePage() {
 
   const queryClient = useQueryClient();
 
-  // Buscar clientes
+  // 1. Check Session on Mount
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push('/login');
+        return;
+      }
+
+      // Fetch User Role
+      const { data: userData } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', session.user.id)
+        .single();
+
+      const role = userData?.role || 'analyst';
+      setUserRole(role);
+
+      // If Admin/PM, fetch analysts list for filter
+      if (role === 'admin' || role === 'pm') {
+        fetchAnalysts();
+      }
+
+      setSessionLoading(false);
+    };
+
+    checkSession();
+  }, [router]);
+
+  const fetchAnalysts = async () => {
+    try {
+      const res = await fetch('/api/users/analysts');
+      const json = await res.json();
+      if (json.success) {
+        setAnalysts(json.data);
+      }
+    } catch (e) {
+      console.error("Failed to fetch analysts", e);
+    }
+  }
+
+  // Buscar clientes (Modified to include analyst_id filter)
   const { data: clientsData, isLoading: loadingClients } = useQuery({
-    queryKey: ['clients'],
+    queryKey: ['clients', selectedAnalystId], // Refetch when filter changes
     queryFn: async () => {
-      const res = await fetch('/api/clients');
+      let url = '/api/clients';
+      if (selectedAnalystId && selectedAnalystId !== 'all') {
+        url += `?analyst_id=${selectedAnalystId}`;
+      }
+      const res = await fetch(url);
       if (!res.ok) throw new Error('Erro ao buscar clientes');
       return res.json();
     },
+    enabled: !sessionLoading, // Only fetch after session check
   });
 
   const clients: Client[] = clientsData?.data || [];
-  const [activeClientId, setActiveClientId] = useState<string | null>(
-    clients[0]?.id || null
-  );
+  const [activeClientId, setActiveClientId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!activeClientId && clients.length > 0) {
+    if ((!activeClientId || !clients.find(c => c.id === activeClientId)) && clients.length > 0) {
       setActiveClientId(clients[0].id);
+    } else if (clients.length === 0) {
+      setActiveClientId(null);
     }
   }, [clients, activeClientId]);
 
@@ -119,6 +177,11 @@ export default function HomePage() {
     },
   });
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
+
   // Calcular linha TOTAL
   const totals = campaigns.reduce(
     (acc, campaign) => {
@@ -172,33 +235,24 @@ export default function HomePage() {
 
   const activeClient = clients.find((c) => c.id === activeClientId);
 
-
-
-  if (loadingClients) {
+  if (sessionLoading || loadingClients) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Carregando clientes...</p>
+          <p className="text-gray-600">Carregando...</p>
         </div>
       </div>
     );
   }
 
-  if (clients.length === 0) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Nenhum cliente cadastrado</h2>
-          <p className="text-gray-600 mb-6">Crie seu primeiro cliente para começar</p>
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Novo Cliente
-          </Button>
-        </div>
-      </div>
-    );
+  // If no clients, but we are loaded, we might still want to show dashboard frame if admin?
+  // Or just empty state.
+  if (clients.length === 0 && !loadingClients) {
+    // Even if 0 clients, better to show something wrapped in a Layout or Navbar so they can logout/add
   }
+
+
 
   return (
     <>
@@ -228,6 +282,12 @@ export default function HomePage() {
           setClientToEdit(client);
           setShowEditClientModal(true);
         }}
+        // Admin Props
+        userRole={userRole}
+        analysts={analysts}
+        selectedAnalystId={selectedAnalystId}
+        onSelectAnalyst={setSelectedAnalystId}
+        onLogout={handleLogout}
       />
 
       <NewClientModal

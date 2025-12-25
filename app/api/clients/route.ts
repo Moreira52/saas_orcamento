@@ -1,46 +1,94 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, handleSupabaseError } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
 
-// GET /api/clients - Listar todos os clientes (exceto deletados)
-export async function GET() {
+// GET /api/clients - Listar todos os clientes (com filtro de permissão)
+export async function GET(request: NextRequest) {
     try {
-        const { data, error } = await supabase
-            .from('clients')                        // Tabela clients
-            .select('*')                            // Buscar todas as colunas
-            .is('deleted_at', null)                 // Apenas clientes ativos (soft delete)
-            .order('display_order', { ascending: true, nullsFirst: false }) // Prioriza ordem manual
-            .order('created_at', { ascending: false }); // Desempate por mais novos
+        const supabase = await createClient();
 
-
-        // Se Supabase retornou erro
-        if (error) {
+        // 1. Verificar Autenticação
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
             return NextResponse.json(
-                handleSupabaseError(error),
-                { status: 500 } // Internal Server Error
+                { success: false, error: 'Usuário não autenticado' },
+                { status: 401 }
             );
         }
 
-        // Sucesso: retornar dados
+        // 2. Verificar Role do Usuário
+        const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+
+        if (userError || !userData) {
+            console.error('Erro ao buscar role do usuário:', userError);
+            // Fallback seguro: trata como analista se der erro
+        }
+
+        const role = userData?.role || 'analyst';
+
+        // 3. Montar Query Base
+        let query = supabase
+            .from('clients')
+            .select('*')
+            .is('deleted_at', null)
+            .order('display_order', { ascending: true, nullsFirst: false })
+            .order('created_at', { ascending: false });
+
+        // 4. Aplicar Filtros de Permissão
+        const searchParams = request.nextUrl.searchParams;
+        const filterAnalystId = searchParams.get('analyst_id');
+
+        if (role === 'admin') {
+            // Admin vê tudo, mas pode filtrar se quiser
+            if (filterAnalystId && filterAnalystId !== 'all') {
+                query = query.eq('analyst_id', filterAnalystId);
+            }
+        } else {
+            // Analista/PM vê APENAS seus clientes
+            query = query.eq('analyst_id', user.id);
+        }
+
+        // 5. Executar Query
+        const { data, error } = await query;
+
+        if (error) {
+            console.error('❌ Erro Supabase:', error);
+            return NextResponse.json(
+                { success: false, error: error.message },
+                { status: 500 }
+            );
+        }
+
         return NextResponse.json({ success: true, data });
 
     } catch (error) {
-        // Erro inesperado (ex: Supabase offline)
         console.error('❌ GET /api/clients error:', error);
         return NextResponse.json(
-            { success: false, error: 'Erro ao buscar clientes' },
+            { success: false, error: 'Erro interno ao buscar clientes' },
             { status: 500 }
         );
     }
 }
 
 // POST /api/clients - Criar novo cliente
-// POST /api/clients - Criar novo cliente
 export async function POST(request: NextRequest) {
     try {
-        const body = await request.json();
-        const { name, logo_url, analyst_id } = body; // Mudou de logo_base64 para logo_url
+        const supabase = await createClient();
+        const { data: { user } } = await supabase.auth.getUser();
 
-        // Validação: Nome é obrigatório
+        if (!user) {
+            return NextResponse.json(
+                { success: false, error: 'Você precisa estar logado para criar clientes.' },
+                { status: 401 }
+            );
+        }
+
+        const body = await request.json();
+        const { name, logo_url } = body;
+
         if (!name || name.trim().length === 0) {
             return NextResponse.json(
                 { success: false, error: 'Nome do cliente é obrigatório' },
@@ -48,33 +96,14 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Validação opcional: Se logo_url fornecido e é Base64, verificar formato
-        if (logo_url && logo_url.startsWith('data:image/')) {
-            // É Base64 válido
-            console.log('✅ Logo Base64 recebida');
-        } else if (logo_url && !logo_url.startsWith('http')) {
-            // Não é Base64 nem URL
-            return NextResponse.json(
-                { success: false, error: 'Logo deve ser Base64 ou URL válida' },
-                { status: 400 }
-            );
-        }
-
-        // Buscar ID do usuário admin padrão (MVP sem autenticação)
-        const { data: adminUser } = await supabase
-            .from('users')
-            .select('id')
-            .eq('role', 'admin')
-            .single();
-
-        // Inserir novo cliente no banco
+        // Inserir novo cliente no banco vinculado ao usuário logado
         const { data, error } = await supabase
             .from('clients')
             .insert([
                 {
                     name: name.trim(),
-                    logo_url: logo_url || null, // Base64 ou URL ou NULL
-                    analyst_id: analyst_id || adminUser?.id,
+                    logo_url: logo_url || null,
+                    analyst_id: user.id, // VINCULA AO USUÁRIO LOGADO
                     last_updated_at: new Date().toISOString(),
                 },
             ])
@@ -84,12 +113,11 @@ export async function POST(request: NextRequest) {
         if (error) {
             console.error('❌ Erro Supabase:', error);
             return NextResponse.json(
-                handleSupabaseError(error),
+                { success: false, error: error.message },
                 { status: 500 }
             );
         }
 
-        console.log('✅ Cliente criado:', data);
         return NextResponse.json(
             { success: true, data },
             { status: 201 }
