@@ -11,16 +11,19 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Campaign } from '@/types/database';
 import { getChannelIcon } from '@/lib/hooks/use-campaign-calculations';
 import { toast } from 'sonner';
+import { formatCurrency } from '@/lib/utils';
 
 interface ObservationsModalProps {
     open: boolean;
     onClose: () => void;
     campaign: Campaign | null;
-    onSave: (observations: string) => Promise<void>;
+    onSave: (data: { observations: string; campaign_type: string; budget: number }) => Promise<void>;
 }
 
 export default function ObservationsModal({
@@ -30,13 +33,17 @@ export default function ObservationsModal({
     onSave,
 }: ObservationsModalProps) {
     const [observations, setObservations] = useState('');
+    const [campaignName, setCampaignName] = useState('');
+    const [budget, setBudget] = useState<string>('');
     const [isSaving, setIsSaving] = useState(false);
     const maxChars = 500;
 
-    // Carregar observações quando modal abre
+    // Carregar dados quando modal abre
     useEffect(() => {
         if (campaign) {
             setObservations(campaign.observations || '');
+            setCampaignName(campaign.campaign_type || '');
+            setBudget(campaign.budget?.toString() || '');
         }
     }, [campaign]);
 
@@ -45,11 +52,29 @@ export default function ObservationsModal({
 
         setIsSaving(true);
         try {
-            await onSave(observations);
-            toast.success('Observações salvas com sucesso!');
+            const numericBudget = parseFloat(budget.toString().replace(',', '.'));
+
+            if (isNaN(numericBudget) || numericBudget < 0) {
+                toast.error('O valor do investimento deve ser um número válido e positivo');
+                setIsSaving(false);
+                return;
+            }
+
+            if (!campaignName.trim()) {
+                toast.error('O nome da campanha não pode estar vazio');
+                setIsSaving(false);
+                return;
+            }
+
+            await onSave({
+                observations,
+                campaign_type: campaignName,
+                budget: numericBudget
+            });
+            toast.success('Alterações salvas com sucesso!');
             onClose();
         } catch (error) {
-            toast.error('Erro ao salvar observações');
+            toast.error('Erro ao salvar alterações');
         } finally {
             setIsSaving(false);
         }
@@ -70,10 +95,10 @@ export default function ObservationsModal({
         <Dialog open={open} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-[550px]">
                 <DialogHeader>
-                    <DialogTitle>Observações da Campanha</DialogTitle>
+                    <DialogTitle>Editar Campanha</DialogTitle>
                     <DialogDescription asChild>
-                        <div className="space-y-2">
-                            <div className="flex items-center gap-2 pt-2">
+                        <div className="space-y-4 pt-4">
+                            <div className="flex items-center gap-2">
                                 <span className="text-lg">{getChannelIcon(campaign.channel)}</span>
                                 <span className="font-medium text-gray-900">
                                     {channelNames[campaign.channel]}
@@ -84,9 +109,31 @@ export default function ObservationsModal({
                                     </Badge>
                                 )}
                             </div>
-                            <p className="text-sm text-gray-600">
-                                <strong>Tipo:</strong> {campaign.campaign_type || 'Não definido'}
-                            </p>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="campaign-name">Nome da Campanha</Label>
+                                    <Input
+                                        id="campaign-name"
+                                        value={campaignName}
+                                        onChange={(e) => setCampaignName(e.target.value)}
+                                        placeholder="Nome da campanha"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="budget">Investimento (R$)</Label>
+                                    <Input
+                                        id="budget"
+                                        type="number"
+                                        value={budget}
+                                        onChange={(e) => setBudget(e.target.value)}
+                                        placeholder="0.00"
+                                        step="0.01"
+                                        min="0"
+                                    />
+                                </div>
+                            </div>
+
                             <p className="text-sm text-gray-600">
                                 <strong>Período:</strong>{' '}
                                 {new Date(campaign.start_date).toLocaleDateString('pt-BR')} até{' '}
@@ -96,7 +143,7 @@ export default function ObservationsModal({
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="space-y-2">
+                <div className="space-y-2 mt-2">
                     <div className="flex items-center justify-between">
                         <label className="text-sm font-medium">Anotações</label>
                         <span
@@ -110,7 +157,7 @@ export default function ObservationsModal({
                         value={observations}
                         onChange={(e) => setObservations(e.target.value)}
                         placeholder="Adicione observações sobre esta campanha..."
-                        rows={8}
+                        rows={6}
                         maxLength={maxChars}
                         className={observations.length > maxChars ? 'border-red-500' : ''}
                     />
@@ -134,7 +181,7 @@ export default function ObservationsModal({
                         onClick={handleSave}
                         disabled={isSaving || observations.length > maxChars}
                     >
-                        {isSaving ? 'Salvando...' : 'Salvar'}
+                        {isSaving ? 'Salvando...' : 'Salvar Alterações'}
                     </Button>
                 </DialogFooter>
             </DialogContent>

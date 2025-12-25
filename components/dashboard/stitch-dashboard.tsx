@@ -584,9 +584,9 @@ export default function StitchDashboard({
                     setSelectedCampaign(null);
                 }}
                 campaign={selectedCampaign}
-                onSave={async (observations) => {
+                onSave={async (data) => {
                     if (selectedCampaign) {
-                        await onUpdateCampaign(selectedCampaign.id, { observations });
+                        await onUpdateCampaign(selectedCampaign.id, data);
                     }
                 }}
             />

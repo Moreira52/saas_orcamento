@@ -651,9 +651,9 @@ export default function CampaignsTable({
                     setSelectedCampaign(null);
                 }}
                 campaign={selectedCampaign}
-                onSave={async (observations) => {
+                onSave={async (data) => {
                     if (selectedCampaign) {
-                        await onUpdate(selectedCampaign.id, { observations });
+                        await onUpdate(selectedCampaign.id, data);
                     }
                 }}
             />
