@@ -18,6 +18,15 @@ export interface User {
     role: UserRole;
     created_at: string;
     updated_at: string;
+    avatar_url?: string | null;
+    birth_date?: string | null;
+    squad_id?: string | null;
+}
+
+export interface Squad {
+    id: string;
+    name: string;
+    created_at: string;
 }
 
 // Estrutura da tabela clients

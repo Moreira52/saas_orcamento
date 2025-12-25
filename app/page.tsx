@@ -29,6 +29,7 @@ export default function HomePage() {
   const router = useRouter();
   const [sessionLoading, setSessionLoading] = useState(true);
   const [userRole, setUserRole] = useState<'admin' | 'analyst' | 'pm' | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ name: string; email: string; role: 'admin' | 'analyst' | 'pm'; avatar_url?: string | null } | null>(null);
 
   // States for Admin Filter
   const [analysts, setAnalysts] = useState<any[]>([]);
@@ -57,15 +58,20 @@ export default function HomePage() {
         return;
       }
 
-      // Fetch User Role
+      // Fetch User Role and Details
       const { data: userData } = await supabase
         .from('users')
-        .select('role')
+        .select('name, email, role, avatar_url')
         .eq('id', session.user.id)
         .single();
 
       const role = userData?.role || 'analyst';
+      const name = userData?.name || 'Usuário';
+      const email = userData?.email || session.user.email || '';
+      const avatar_url = userData?.avatar_url || null;
+
       setUserRole(role);
+      setCurrentUser({ name, email, role, avatar_url });
 
       // If Admin/PM, fetch analysts list for filter
       if (role === 'admin' || role === 'pm') {
@@ -288,6 +294,7 @@ export default function HomePage() {
         selectedAnalystId={selectedAnalystId}
         onSelectAnalyst={setSelectedAnalystId}
         onLogout={handleLogout}
+        currentUser={currentUser}
       />
 
       <NewClientModal

@@ -17,8 +17,17 @@ import {
     Target,
     UserPlus,
     Trash2,
-    FileText
+    FileText,
+    LogOut
 } from 'lucide-react';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import Image from 'next/image';
 import { formatCurrency, formatPercentage } from '@/lib/utils';
 import { Campaign, Client } from '@/types/database';
@@ -65,6 +74,12 @@ interface StitchDashboardProps {
     selectedAnalystId: string;
     onSelectAnalyst: (id: string) => void;
     onLogout: () => void;
+    currentUser: {
+        name: string;
+        email: string;
+        role: 'admin' | 'analyst' | 'pm';
+        avatar_url?: string | null;
+    } | null;
 }
 
 export default function StitchDashboard({
@@ -87,7 +102,8 @@ export default function StitchDashboard({
     analysts,
     selectedAnalystId,
     onSelectAnalyst,
-    onLogout
+    onLogout,
+    currentUser
 }: StitchDashboardProps) {
     const activeClient = clients.find(c => c.id === activeClientId);
 
@@ -215,23 +231,54 @@ export default function StitchDashboard({
                         <button className="w-10 h-10 rounded-full bg-element-light hover:bg-element-hover-light border border-border-light flex items-center justify-center text-text-primary-light transition-colors">
                             <Bell className="h-5 w-5" />
                         </button>
-                        <div className="flex items-center gap-3 pl-2">
-                            <div className="text-right hidden sm:block">
-                                <p className="text-sm font-bold text-text-primary-light">João Silva</p>
-                                <p className="text-xs text-text-muted-light">@joaosilva</p>
-                            </div>
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-200 to-gray-400 overflow-hidden border border-gray-300 relative">
-                                <div className="w-full h-full flex items-center justify-center bg-gray-300 text-gray-600">JS</div>
-                            </div>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                onClick={onLogout}
-                            >
-                                <ArrowUp className="w-4 h-4 rotate-90" /> {/* Simulating Logout Icon briefly or using LogOut from lucide if available. I imported LogOut earlier in page.tsx but here in dashboard I might need to import it. Let's check imports. LogOut is NOT imported in dashboard.tsx yet. I will use a simple text or generic icon or add import. */}
-                                Sair
-                            </Button>
+                        <div className="pl-2">
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <button className="flex items-center gap-3 hover:bg-card-hover-light p-2 rounded-full transition-colors outline-none focus:ring-2 focus:ring-accent-primary group">
+                                        <div className="text-right hidden sm:block">
+                                            <p className="text-sm font-bold text-text-primary-light group-hover:text-black transition-colors">
+                                                {currentUser?.name || 'Usuário'}
+                                            </p>
+                                            <p className="text-xs text-text-muted-light group-hover:text-gray-600 transition-colors">
+                                                {currentUser?.role === 'admin' ? 'Admin' :
+                                                    currentUser?.role === 'pm' ? 'Gestor de Projeto' : 'Analista'}
+                                            </p>
+                                        </div>
+                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-200 to-gray-400 overflow-hidden border border-gray-300 relative group-hover:border-accent-primary transition-colors">
+                                            {currentUser?.avatar_url ? (
+                                                <Image src={currentUser.avatar_url} alt="Profile" fill className="object-cover" />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center bg-gray-300 text-gray-600 font-bold">
+                                                    {currentUser?.name
+                                                        ? currentUser.name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
+                                                        : 'U'}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-56 bg-white border border-border-light shadow-lg rounded-xl p-2">
+                                    <DropdownMenuLabel className="font-normal">
+                                        <div className="flex flex-col space-y-1">
+                                            <p className="text-sm font-medium leading-none text-black">{currentUser?.name}</p>
+                                            <p className="text-xs leading-none text-muted-foreground text-gray-500">{currentUser?.email}</p>
+                                        </div>
+                                    </DropdownMenuLabel>
+                                    <DropdownMenuSeparator className="bg-gray-100" />
+                                    <DropdownMenuItem className="cursor-pointer rounded-lg px-2 py-2 hover:bg-gray-100 transition-colors" asChild>
+                                        <a href="/profile" className="flex items-center text-text-primary-light">
+                                            <div className="mr-2 h-4 w-4 flex items-center justify-center">
+                                                <UserPlus className="h-4 w-4" />
+                                            </div>
+                                            <span>Meu Perfil</span>
+                                        </a>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem className="text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer rounded-lg px-2 py-2" onClick={onLogout}>
+                                        <LogOut className="mr-2 h-4 w-4" />
+                                        <span>Sair</span>
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </div>
                     </div>
                 </div>
