@@ -258,6 +258,16 @@ export default function StitchDashboard({
                                 onChange={onMonthChange}
                                 iconOnly
                             />
+
+                            {currentUser?.role === 'admin' && (
+                                <a
+                                    href="/admin/overview"
+                                    className="w-11 h-11 rounded-full border border-border-light bg-white dark:bg-card-light text-text-muted-light hover:text-orange-500 hover:border-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/10 flex items-center justify-center transition-all shadow-sm"
+                                    title="Visão Geral Admin"
+                                >
+                                    <LayoutDashboard className="h-5 w-5" />
+                                </a>
+                            )}
                         </div>
                     </div>
 
@@ -341,6 +351,20 @@ export default function StitchDashboard({
                                         </div>
                                     </DropdownMenuLabel>
                                     <DropdownMenuSeparator className="bg-gray-100 my-1" />
+
+                                    {currentUser?.role === 'admin' && (
+                                        <>
+                                            <DropdownMenuItem className="cursor-pointer rounded-xl px-3 py-2.5 hover:bg-card-hover-light focus:bg-card-hover-light transition-colors text-text-primary-light" asChild>
+                                                <a href="/admin/overview" className="flex items-center gap-2">
+                                                    <div className="h-8 w-8 rounded-full bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 flex items-center justify-center">
+                                                        <LayoutDashboard className="h-4 w-4" />
+                                                    </div>
+                                                    <span className="font-medium">Visão Admin</span>
+                                                </a>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator className="bg-border-light my-1" />
+                                        </>
+                                    )}
                                     <DropdownMenuItem className="cursor-pointer rounded-xl px-3 py-2.5 hover:bg-card-hover-light focus:bg-card-hover-light transition-colors text-text-primary-light" asChild>
                                         <a href="/profile" className="flex items-center gap-2">
                                             <div className="h-8 w-8 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center">
