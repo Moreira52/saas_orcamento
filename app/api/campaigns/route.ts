@@ -16,11 +16,12 @@ export async function GET(request: NextRequest) {
             );
         }
 
+        // Tenta buscar ordenado por posição para suportar Drag and Drop
         let query = supabase
             .from('campaigns')
             .select('*')
             .eq('client_id', clientId)
-            .order('start_date', { ascending: true });
+            .order('position', { ascending: true });
 
         if (monthYear) {
             query = query.eq('month_year', monthYear);
@@ -28,7 +29,28 @@ export async function GET(request: NextRequest) {
 
         const { data, error } = await query;
 
-        if (error) return NextResponse.json(handleSupabaseError(error), { status: 500 });
+        // Fallback: Se der erro (provavelmente coluna 'position' inexistente), tenta ordenar por created_at
+        if (error) {
+            console.warn('Erro ao buscar ordenado por posição (provável falta de migração), tentando fallback:', error.message);
+
+            let fallbackQuery = supabase
+                .from('campaigns')
+                .select('*')
+                .eq('client_id', clientId)
+                .order('created_at', { ascending: true });
+
+            if (monthYear) {
+                fallbackQuery = fallbackQuery.eq('month_year', monthYear);
+            }
+
+            const { data: fallbackData, error: fallbackError } = await fallbackQuery;
+
+            if (fallbackError) {
+                return NextResponse.json(handleSupabaseError(fallbackError), { status: 500 });
+            }
+
+            return NextResponse.json({ success: true, data: fallbackData });
+        }
 
         return NextResponse.json({ success: true, data });
     } catch (error) {

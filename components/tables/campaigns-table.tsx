@@ -529,38 +529,7 @@ export default function CampaignsTable({
                 },
             },
 
-            // COLUNA 15: % Budget
-            {
-                id: 'percent_budget',
-                header: '% Budget',
-                cell: ({ row }) => {
-                    const calc = useCampaignCalculations(
-                        row.original.budget,
-                        row.original.meta_percentage,
-                        row.original.start_date,
-                        row.original.end_date,
-                        row.original.current_spend
-                    );
 
-                    const color = calc.percentBudget > 110
-                        ? 'bg-red-500'
-                        : calc.percentBudget >= 100
-                            ? 'bg-blue-500'
-                            : 'bg-green-500';
-
-                    return (
-                        <div className="flex items-center gap-2 min-w-[120px]">
-                            <Progress
-                                value={Math.min(calc.percentBudget, 100)}
-                                className={`h-2 flex-1 ${color}`}
-                            />
-                            <span className="text-xs font-medium min-w-[40px]">
-                                {calc.percentBudget.toFixed(0)}%
-                            </span>
-                        </div>
-                    );
-                },
-            },
 
             // COLUNA 16: Ações
             {

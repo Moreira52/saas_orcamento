@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Check, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { Check, ChevronDown, ChevronsUpDown, GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
     Popover,
@@ -66,12 +66,13 @@ function SortableItem({ client, isActive, onSelect }: SortableItemProps) {
             {...attributes}
             {...listeners}
             className={cn(
-                'relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
-                isActive ? 'bg-accent text-accent-foreground' : 'hover:bg-accent hover:text-accent-foreground',
-                isDragging && 'opacity-50 bg-accent/50'
+                'relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors data-[disabled]:pointer-events-none data-[disabled]:opacity-50 text-text-primary-light',
+                isActive ? 'bg-accent-primary text-black font-medium' : 'hover:bg-card-hover-light hover:text-text-primary-light',
+                isDragging && 'opacity-50 bg-card-hover-light'
             )}
             onClick={() => onSelect(client.id)}
         >
+            <GripVertical className="mr-2 h-4 w-4 opacity-50" />
             <span className="flex-1 truncate">{client.name}</span>
             {isActive && <Check className="ml-auto h-4 w-4" />}
         </div>
@@ -156,7 +157,7 @@ export function ClientSwitcher({ clients, activeClientId, onChange }: ClientSwit
                     <ChevronDown className="ml-2 h-4 w-4 opacity-50 shrink-0" />
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[200px] p-0 bg-white" align="start">
+            <PopoverContent className="w-[200px] p-0 bg-card-light border-border-light" align="start">
                 <div className="p-1">
                     <DndContext
                         sensors={sensors}

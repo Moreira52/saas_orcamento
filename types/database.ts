@@ -59,4 +59,5 @@ export interface Campaign {
     month_year: string;       // Ex: "2025-11"
     created_at: string;
     updated_at: string;
+    position: number;
 }

@@ -81,14 +81,14 @@ export default function MonthYearPicker({ value, onChange, className }: MonthYea
                     {getDisplayValue()}
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[320px] p-0" align="start">
-                <div className="bg-white rounded-lg shadow-lg">
+            <PopoverContent className="w-[320px] p-0 border-border-light bg-card-light" align="start">
+                <div className="bg-card-light rounded-lg shadow-lg">
                     {/* Header com título e reset */}
-                    <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-                        <h3 className="font-bold text-sm text-gray-900">Período</h3>
+                    <div className="flex items-center justify-between border-b border-border-light px-4 py-3">
+                        <h3 className="font-bold text-sm text-text-primary-light">Período</h3>
                         <button
                             onClick={handleReset}
-                            className="text-xs font-semibold text-gray-500 hover:text-accent-primary transition-colors uppercase tracking-wide"
+                            className="text-xs font-semibold text-text-muted-light hover:text-accent-primary transition-colors uppercase tracking-wide"
                         >
                             Atual
                         </button>
@@ -103,10 +103,10 @@ export default function MonthYearPicker({ value, onChange, className }: MonthYea
                                     onClick={() => handleMonthSelect(month.value)}
                                     className={cn(
                                         'px-2 py-2 rounded-lg text-sm font-medium transition-all text-center',
-                                        'hover:bg-gray-50',
+                                        'hover:bg-card-hover-light',
                                         selectedMonth === month.value
                                             ? 'bg-accent-primary text-black shadow-sm font-bold scale-105'
-                                            : 'bg-white border border-gray-100 text-gray-600 hover:border-gray-300'
+                                            : 'bg-card-light border border-border-light text-text-muted-light hover:border-border-dark-hover hover:text-text-primary-light'
                                     )}
                                 >
                                     {month.label}
@@ -122,10 +122,10 @@ export default function MonthYearPicker({ value, onChange, className }: MonthYea
                                     onClick={() => handleYearSelect(year)}
                                     className={cn(
                                         'px-2 py-2 rounded-lg text-sm font-medium transition-all text-center',
-                                        'hover:bg-gray-50',
+                                        'hover:bg-card-hover-light',
                                         selectedYear === year
                                             ? 'bg-accent-primary text-black shadow-sm font-bold scale-105'
-                                            : 'bg-white border border-gray-100 text-gray-600 hover:border-gray-300'
+                                            : 'bg-card-light border border-border-light text-text-muted-light hover:border-border-dark-hover hover:text-text-primary-light'
                                     )}
                                 >
                                     {year}

@@ -44,18 +44,19 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
-  --color-bg-light: #F7F8FA;
-  --color-card-light: #FFFFFF;
-  --color-card-hover-light: #F0F2F5;
-  --color-accent-primary: #C3F53B;
-  --color-accent-orange: #FF9F2D;
-  --color-accent-white: #FFFFFF;
-  --color-text-muted-light: #6B7280;
-  --color-text-primary-light: #2D3748;
-  --color-border-light: #E2E8F0;
-  --color-border-dark-hover: #CCD0D7;
-  --color-element-light: #E9ECEF;
-  --color-element-hover-light: #DEE2E6;
+  /* Custom Themed Colors using CSS Vars */
+  --color-bg-light: var(--bg-light);
+  --color-card-light: var(--card-light);
+  --color-card-hover-light: var(--card-hover-light);
+  --color-accent-primary: var(--accent-primary);
+  --color-accent-orange: var(--accent-orange);
+  --color-accent-white: var(--accent-white);
+  --color-text-muted-light: var(--text-muted-light);
+  --color-text-primary-light: var(--text-primary-light);
+  --color-border-light: var(--border-light);
+  --color-border-dark-hover: var(--border-dark-hover);
+  --color-element-light: var(--element-light);
+  --color-element-hover-light: var(--element-hover-light);
 }
 
 :root {
@@ -91,6 +92,20 @@
   --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
   --sidebar-border: oklch(0.929 0.013 255.508);
   --sidebar-ring: oklch(0.704 0.04 256.788);
+
+  /* Custom Light Mode Values */
+  --bg-light: #F7F8FA;
+  --card-light: #FFFFFF;
+  --card-hover-light: #F0F2F5;
+  --accent-primary: #C3F53B;
+  --accent-orange: #FF9F2D;
+  --accent-white: #FFFFFF;
+  --text-muted-light: #6B7280;
+  --text-primary-light: #2D3748;
+  --border-light: #E2E8F0;
+  --border-dark-hover: #CCD0D7;
+  --element-light: #E9ECEF;
+  --element-hover-light: #DEE2E6;
 }
 
 .dark {
@@ -125,12 +140,36 @@
   --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.551 0.027 264.364);
+
+  /* Custom Dark Mode Values Overrides */
+  --bg-light: oklch(0.129 0.042 264.695);
+  /* match --background */
+  --card-light: oklch(0.208 0.042 265.755);
+  /* match --card */
+  --card-hover-light: oklch(0.279 0.041 260.031);
+  /* match --accent roughly */
+  --accent-primary: #C3F53B;
+  /* Keep Green */
+  --accent-orange: #FF9F2D;
+  --accent-white: oklch(0.208 0.042 265.755);
+  /* inverse white -> dark card */
+  --text-muted-light: oklch(0.704 0.04 256.788);
+  /* match --muted-foreground */
+  --text-primary-light: oklch(0.984 0.003 247.858);
+  /* match --foreground */
+  --border-light: oklch(1 0 0 / 10%);
+  /* match --border */
+  --border-dark-hover: oklch(1 0 0 / 20%);
+  --element-light: oklch(0.279 0.041 260.031);
+  /* match --secondary/muted */
+  --element-hover-light: oklch(0.35 0.041 260.031);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }

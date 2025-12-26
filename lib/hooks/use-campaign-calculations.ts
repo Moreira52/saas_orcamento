@@ -45,7 +45,7 @@ export function useCampaignCalculations(
     } else if (isFuture(start)) {
         daysPassed = 0;
     } else {
-        daysPassed = differenceInDays(today, start) + 1;
+        daysPassed = differenceInDays(today, start);
     }
 
     const daysRemaining = Math.max(0, totalDays - daysPassed);
@@ -91,13 +91,15 @@ export function useCampaignCalculations(
         }
     }
 
+    const diffIndex = percentRealSpent - percentTime;
     let spentBadgeColor: string;
-    if (percentRealSpent >= 90) {
-        spentBadgeColor = 'bg-green-100 text-green-800';
-    } else if (percentRealSpent >= 70) {
-        spentBadgeColor = 'bg-yellow-100 text-yellow-800';
+
+    if (diffIndex > 1.5 || diffIndex < -5) {
+        spentBadgeColor = 'bg-red-100 text-red-800 px-2 py-0.5 rounded-full';
+    } else if (diffIndex >= -5 && diffIndex < -3) {
+        spentBadgeColor = 'bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full';
     } else {
-        spentBadgeColor = 'bg-red-100 text-red-800';
+        spentBadgeColor = 'bg-green-100 text-green-800 px-2 py-0.5 rounded-full';
     }
 
     return {
