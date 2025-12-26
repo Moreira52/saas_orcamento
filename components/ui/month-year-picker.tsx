@@ -10,9 +10,10 @@ interface MonthYearPickerProps {
     value: string; // Formato: "2024-08"
     onChange: (value: string) => void;
     className?: string;
+    iconOnly?: boolean;
 }
 
-export default function MonthYearPicker({ value, onChange, className }: MonthYearPickerProps) {
+export default function MonthYearPicker({ value, onChange, className, iconOnly = false }: MonthYearPickerProps) {
     const [open, setOpen] = useState(false);
 
     // Parse valor atual
@@ -73,12 +74,13 @@ export default function MonthYearPicker({ value, onChange, className }: MonthYea
                 <Button
                     variant="outline"
                     className={cn(
-                        'w-[220px] justify-start text-left font-normal capitalize',
+                        'justify-start text-left font-normal capitalize',
+                        iconOnly ? 'w-11 px-0 justify-center' : 'w-[220px]',
                         className
                     )}
                 >
-                    <Calendar className="mr-2 h-4 w-4" />
-                    {getDisplayValue()}
+                    <Calendar className={cn("h-4 w-4", !iconOnly && "mr-2")} />
+                    {!iconOnly && getDisplayValue()}
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[320px] p-0 border-border-light bg-card-light" align="start">

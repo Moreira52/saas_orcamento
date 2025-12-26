@@ -95,11 +95,11 @@ export function useCampaignCalculations(
     let spentBadgeColor: string;
 
     if (diffIndex > 1.5 || diffIndex < -5) {
-        spentBadgeColor = 'bg-red-100 text-red-800 px-2 py-0.5 rounded-full';
+        spentBadgeColor = 'bg-red-500/10 text-red-600 border border-red-500/20 px-2 py-0.5 rounded-full';
     } else if (diffIndex >= -5 && diffIndex < -3) {
-        spentBadgeColor = 'bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full';
+        spentBadgeColor = 'bg-yellow-500/10 text-yellow-600 border border-yellow-500/20 px-2 py-0.5 rounded-full';
     } else {
-        spentBadgeColor = 'bg-green-100 text-green-800 px-2 py-0.5 rounded-full';
+        spentBadgeColor = 'bg-green-500/10 text-green-600 border border-green-500/20 px-2 py-0.5 rounded-full';
     }
 
     return {

@@ -9,9 +9,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Loader2, LayoutDashboard, Eye, EyeOff } from 'lucide-react';
+import { useTheme } from 'next-themes';
+import { Loader2, LayoutDashboard, Eye, EyeOff, Sun, Moon } from 'lucide-react';
 
 export default function LoginPage() {
+    const { setTheme, theme } = useTheme();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -67,6 +69,17 @@ export default function LoginPage() {
                     </p>
                 </div>
 
+                <div className="absolute top-4 right-4">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                        className="rounded-full w-10 h-10 bg-card-light border border-border-light text-text-primary-light hover:bg-card-hover-light"
+                    >
+                        {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+                    </Button>
+                </div>
+
                 <Card className="bg-card-light border-border-light rounded-3xl shadow-[0_0_40px_rgba(0,0,0,0.05)]">
                     <form onSubmit={handleLogin}>
                         <CardHeader>
@@ -82,7 +95,7 @@ export default function LoginPage() {
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     required
-                                    className="h-12 rounded-xl bg-white border-border-light focus:ring-accent-primary focus:border-accent-primary"
+                                    className="h-12 rounded-xl bg-card-light dark:bg-element-light border-border-light focus:ring-accent-primary focus:border-accent-primary"
                                 />
                             </div>
                             <div className="space-y-2">
@@ -94,7 +107,7 @@ export default function LoginPage() {
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
                                         required
-                                        className="h-12 rounded-xl bg-white border-border-light focus:ring-accent-primary focus:border-accent-primary pr-10"
+                                        className="h-12 rounded-xl bg-card-light dark:bg-element-light border-border-light focus:ring-accent-primary focus:border-accent-primary pr-10"
                                     />
                                     <button
                                         type="button"
@@ -136,6 +149,6 @@ export default function LoginPage() {
                     </form>
                 </Card>
             </div>
-        </div>
+        </div >
     );
 }

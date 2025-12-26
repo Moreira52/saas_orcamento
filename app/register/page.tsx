@@ -10,9 +10,11 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Loader2, User, Users, ShieldAlert, Eye, EyeOff, LayoutDashboard } from 'lucide-react';
+import { useTheme } from 'next-themes';
+import { Loader2, User, Users, ShieldAlert, Eye, EyeOff, LayoutDashboard, Sun, Moon } from 'lucide-react';
 
 export default function RegisterPage() {
+    const { setTheme, theme } = useTheme();
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -69,6 +71,17 @@ export default function RegisterPage() {
     return (
         <div className="min-h-screen flex items-center justify-center bg-bg-light px-4 py-8 font-sans text-text-primary-light">
             <div className="w-full max-w-md space-y-8">
+                <div className="absolute top-4 right-4">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                        className="rounded-full w-10 h-10 bg-card-light border border-border-light text-text-primary-light hover:bg-card-hover-light"
+                    >
+                        {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+                    </Button>
+                </div>
+
                 <div className="flex flex-col items-center text-center space-y-2">
                     <div className="flex items-center gap-3 mb-2">
                         <div className="w-10 h-10 bg-text-primary-light rounded-full flex items-center justify-center text-white">
@@ -89,15 +102,15 @@ export default function RegisterPage() {
                     <CardContent>
                         <Tabs defaultValue="analyst" onValueChange={(val) => setRole(val as any)} className="w-full">
                             <TabsList className="grid w-full grid-cols-3 mb-6 bg-element-light p-1 rounded-full h-11">
-                                <TabsTrigger value="analyst" className="rounded-full data-[state=active]:bg-white data-[state=active]:shadow-sm flex items-center gap-2">
+                                <TabsTrigger value="analyst" className="rounded-full data-[state=active]:bg-white dark:data-[state=active]:bg-card-light data-[state=active]:shadow-sm flex items-center gap-2">
                                     <User className="h-4 w-4" />
                                     Analista
                                 </TabsTrigger>
-                                <TabsTrigger value="pm" className="rounded-full data-[state=active]:bg-white data-[state=active]:shadow-sm flex items-center gap-2">
+                                <TabsTrigger value="pm" className="rounded-full data-[state=active]:bg-white dark:data-[state=active]:bg-card-light data-[state=active]:shadow-sm flex items-center gap-2">
                                     <Users className="h-4 w-4" />
                                     Gestor
                                 </TabsTrigger>
-                                <TabsTrigger value="admin" className="rounded-full data-[state=active]:bg-white data-[state=active]:shadow-sm flex items-center gap-2">
+                                <TabsTrigger value="admin" className="rounded-full data-[state=active]:bg-white dark:data-[state=active]:bg-card-light data-[state=active]:shadow-sm flex items-center gap-2">
                                     <ShieldAlert className="h-4 w-4" />
                                     Admin
                                 </TabsTrigger>
@@ -112,7 +125,7 @@ export default function RegisterPage() {
                                         value={name}
                                         onChange={(e) => setName(e.target.value)}
                                         required
-                                        className="h-12 rounded-xl bg-white border-border-light focus:ring-accent-primary focus:border-accent-primary"
+                                        className="h-12 rounded-xl bg-white dark:bg-element-light border-border-light focus:ring-accent-primary focus:border-accent-primary"
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -124,7 +137,7 @@ export default function RegisterPage() {
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                         required
-                                        className="h-12 rounded-xl bg-white border-border-light focus:ring-accent-primary focus:border-accent-primary"
+                                        className="h-12 rounded-xl bg-white dark:bg-element-light border-border-light focus:ring-accent-primary focus:border-accent-primary"
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -137,7 +150,7 @@ export default function RegisterPage() {
                                             onChange={(e) => setPassword(e.target.value)}
                                             required
                                             minLength={6}
-                                            className="h-12 rounded-xl bg-white border-border-light focus:ring-accent-primary focus:border-accent-primary pr-10"
+                                            className="h-12 rounded-xl bg-white dark:bg-element-light border-border-light focus:ring-accent-primary focus:border-accent-primary pr-10"
                                         />
                                         <button
                                             type="button"

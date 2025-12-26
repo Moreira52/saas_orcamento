@@ -253,9 +253,10 @@ export default function StitchDashboard({
                             )}
 
                             <MonthYearPicker
-                                className="w-[170px] h-11 rounded-full border-border-light bg-card-light text-text-primary-light font-medium hover:bg-card-hover-light focus:ring-accent-primary transition-all shadow-sm cursor-pointer"
+                                className="w-11 h-11 rounded-full border-border-light bg-card-light text-text-primary-light font-medium hover:bg-card-hover-light focus:ring-accent-primary transition-all shadow-sm cursor-pointer"
                                 value={selectedMonth}
                                 onChange={onMonthChange}
+                                iconOnly
                             />
                         </div>
                     </div>
@@ -307,12 +308,12 @@ export default function StitchDashboard({
 
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <button className="flex items-center gap-3 pl-1 pr-2 py-1 rounded-full hover:bg-gray-100/50 transition-colors outline-none group">
-                                        <div className="text-right hidden md:block">
+                                    <button className="flex items-center gap-3 pl-4 pr-1 py-1 rounded-full hover:bg-card-hover-light transition-colors outline-none group">
+                                        <div className="text-right hidden md:block pr-3">
                                             <p className="text-sm font-bold text-text-primary-light group-hover:text-text-primary-light transition-colors leading-tight whitespace-nowrap">
                                                 {currentUser?.name || 'Usuário'}
                                             </p>
-                                            <p className="text-[11px] text-text-muted-light group-hover:text-gray-600 transition-colors font-medium whitespace-nowrap">
+                                            <p className="text-xs text-text-muted-light group-hover:text-text-primary-light transition-colors font-medium whitespace-nowrap">
                                                 {currentUser?.role === 'admin' ? 'Admin' :
                                                     currentUser?.role === 'pm' ? 'Gestor' : 'Analista'}
                                             </p>
@@ -395,6 +396,17 @@ export default function StitchDashboard({
                                 <div className="flex items-center gap-3">
                                     {activeClient && (
                                         <>
+                                            <div className="flex items-center gap-2 mr-2 px-3 py-1.5 bg-card-light border border-border-light rounded-lg shadow-sm">
+                                                <Calendar className="h-4 w-4 text-text-muted-light" />
+                                                <span className="text-sm font-bold text-text-primary-light capitalize">
+                                                    {(() => {
+                                                        const [y, m] = selectedMonth.split('-').map(Number);
+                                                        const date = new Date(y, m - 1);
+                                                        const monthName = date.toLocaleDateString('pt-BR', { month: 'long' });
+                                                        return `${monthName} ${y}`;
+                                                    })()}
+                                                </span>
+                                            </div>
                                             <button
                                                 onClick={() => onEditClient(activeClient)}
                                                 className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-text-muted-light hover:text-text-primary-light hover:bg-card-hover-light rounded-lg transition-colors"
@@ -636,7 +648,7 @@ export default function StitchDashboard({
                                                                                     <input
                                                                                         type="number"
                                                                                         autoFocus
-                                                                                        className="w-16 text-center border rounded px-1 py-0.5 text-sm"
+                                                                                        className="w-16 text-center border border-border-light rounded px-1 py-0.5 text-sm bg-card-light text-text-primary-light focus:ring-1 focus:ring-accent-primary outline-none"
                                                                                         value={editValue}
                                                                                         onChange={(e) => setEditValue(e.target.value)}
                                                                                         onBlur={() => handleImmediateSave(campaign.id, 'meta_percentage', editValue)}
@@ -651,7 +663,7 @@ export default function StitchDashboard({
                                                                                             setEditingCell(`${campaign.id}|meta_percentage`);
                                                                                             setEditValue(campaign.meta_percentage);
                                                                                         }}
-                                                                                        className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded inline-block"
+                                                                                        className="cursor-pointer hover:bg-card-hover-light px-2 py-1 rounded inline-block transition-colors"
                                                                                     >
                                                                                         <span className="text-sm font-medium text-text-primary-light">{campaign.meta_percentage}%</span>
                                                                                     </div>
@@ -663,7 +675,7 @@ export default function StitchDashboard({
                                                                                     <input
                                                                                         type="number"
                                                                                         autoFocus
-                                                                                        className="w-24 border rounded px-1 py-0.5 text-sm font-bold"
+                                                                                        className="w-24 border border-border-light rounded px-1 py-0.5 text-sm font-bold bg-card-light text-text-primary-light focus:ring-1 focus:ring-accent-primary outline-none"
                                                                                         value={editValue}
                                                                                         onChange={(e) => setEditValue(e.target.value)}
                                                                                         onBlur={() => handleImmediateSave(campaign.id, 'current_spend', editValue)}
@@ -678,7 +690,7 @@ export default function StitchDashboard({
                                                                                             setEditingCell(`${campaign.id}|current_spend`);
                                                                                             setEditValue(campaign.current_spend);
                                                                                         }}
-                                                                                        className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded inline-block"
+                                                                                        className="cursor-pointer hover:bg-card-hover-light px-2 py-1 rounded inline-block transition-colors"
                                                                                     >
                                                                                         <span className="text-sm font-extrabold text-text-primary-light text-lg">{formatCurrency(campaign.current_spend)}</span>
                                                                                     </div>
@@ -718,7 +730,7 @@ export default function StitchDashboard({
 
                                                                             <td className="py-4 px-3 align-middle">
                                                                                 <div className="flex items-center gap-2">
-                                                                                    <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                                                                    <div className="w-full bg-element-light rounded-full h-1.5">
                                                                                         <div className="bg-text-primary-light h-1.5 rounded-full" style={{ width: `${Math.min(calculation.percentTime, 100)}%` }}></div>
                                                                                     </div>
                                                                                     <span className="text-xs font-medium min-w-[30px]">{calculation.percentTime.toFixed(0)}%</span>
