@@ -279,7 +279,7 @@ export default function StitchDashboard({
                         <div className="flex items-center gap-3">
                             <button
                                 onClick={onNewCampaign}
-                                className="flex items-center gap-2 px-6 h-11 bg-accent-primary text-black rounded-full font-bold hover:bg-[#B2E030] hover:scale-105 active:scale-95 transition-all shadow-[0_4px_14px_rgba(195,245,59,0.3)]">
+                                className="flex-shrink-0 flex items-center gap-2 px-6 h-11 bg-accent-primary text-black rounded-full font-bold hover:bg-[#B2E030] hover:scale-105 active:scale-95 transition-all shadow-[0_4px_14px_rgba(195,245,59,0.3)] whitespace-nowrap">
                                 <Plus className="h-5 w-5" />
                                 <span className="hidden lg:inline">Nova Campanha</span>
                             </button>
@@ -287,7 +287,7 @@ export default function StitchDashboard({
                             {(userRole === 'admin' || userRole === 'pm') && (
                                 <button
                                     onClick={onNewClient}
-                                    className="w-11 h-11 rounded-full bg-card-light border border-border-light flex items-center justify-center text-text-muted-light hover:text-accent-primary hover:border-accent-primary hover:bg-card-hover-light transition-all shadow-sm"
+                                    className="flex-shrink-0 w-11 h-11 rounded-full bg-card-light border border-border-light flex items-center justify-center text-text-muted-light hover:text-accent-primary hover:border-accent-primary hover:bg-card-hover-light transition-all shadow-sm"
                                     title="Novo Cliente"
                                 >
                                     <UserPlus className="h-5 w-5" />
@@ -309,10 +309,10 @@ export default function StitchDashboard({
                                 <DropdownMenuTrigger asChild>
                                     <button className="flex items-center gap-3 pl-1 pr-2 py-1 rounded-full hover:bg-gray-100/50 transition-colors outline-none group">
                                         <div className="text-right hidden md:block">
-                                            <p className="text-sm font-bold text-text-primary-light group-hover:text-text-primary-light transition-colors leading-tight">
+                                            <p className="text-sm font-bold text-text-primary-light group-hover:text-text-primary-light transition-colors leading-tight whitespace-nowrap">
                                                 {currentUser?.name || 'Usuário'}
                                             </p>
-                                            <p className="text-[11px] text-text-muted-light group-hover:text-gray-600 transition-colors font-medium">
+                                            <p className="text-[11px] text-text-muted-light group-hover:text-gray-600 transition-colors font-medium whitespace-nowrap">
                                                 {currentUser?.role === 'admin' ? 'Admin' :
                                                     currentUser?.role === 'pm' ? 'Gestor' : 'Analista'}
                                             </p>

@@ -153,7 +153,11 @@ export function ClientSwitcher({ clients, activeClientId, onChange }: ClientSwit
                     aria-expanded={open}
                     className="w-[200px] h-[46px] rounded-full border-border-light bg-card-light text-text-primary-light font-medium focus:ring-accent-primary justify-between shadow-sm hover:bg-card-hover-light"
                 >
-                    {activeClient ? activeClient.name : 'Selecione o Cliente'}
+                    {activeClient ? (
+                        <span className="truncate flex-1 text-left">{activeClient.name}</span>
+                    ) : (
+                        <span className="truncate flex-1 text-left">Selecione o Cliente</span>
+                    )}
                     <ChevronDown className="ml-2 h-4 w-4 opacity-50 shrink-0" />
                 </Button>
             </PopoverTrigger>
