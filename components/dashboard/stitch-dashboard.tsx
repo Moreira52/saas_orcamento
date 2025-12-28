@@ -215,6 +215,31 @@ export default function StitchDashboard({
     // Calculate previous month comparison (mocked for now as we don't have prev month data easily)
     const growthPercentage = 12;
 
+    const footerTotals = filteredCampaigns.reduce((acc, campaign) => {
+        const calc = useCampaignCalculations(
+            campaign.budget,
+            campaign.meta_percentage,
+            campaign.start_date,
+            campaign.end_date,
+            campaign.current_spend
+        );
+        return {
+            budget: acc.budget + campaign.budget,
+            currentSpend: acc.currentSpend + campaign.current_spend,
+            parcial97: acc.parcial97 + calc.parcial97,
+            parcial100: acc.parcial100 + calc.parcial100,
+            investDia97: acc.investDia97 + calc.investDia97,
+            investDia100: acc.investDia100 + calc.investDia100,
+        };
+    }, {
+        budget: 0,
+        currentSpend: 0,
+        parcial97: 0,
+        parcial100: 0,
+        investDia97: 0,
+        investDia100: 0,
+    });
+
     return (
         <div className="bg-bg-light min-h-screen font-sans text-text-primary-light">
             {/* Header */}
@@ -801,6 +826,43 @@ export default function StitchDashboard({
                                                     </tbody>
                                                 )}
                                             </Droppable>
+                                            <tfoot>
+                                                <tr className="bg-card-light/50 border-t border-border-light font-medium text-sm text-text-muted-light">
+                                                    <td className="py-4 pl-6 rounded-bl-xl"></td>
+                                                    <td className="py-4 pl-2 uppercase tracking-wider">TOTAL</td>
+                                                    <td className="py-4 px-3">{formatCurrency(footerTotals.budget)}</td>
+                                                    <td className="py-4 px-3"></td>
+                                                    <td className="py-4 px-3"></td>
+                                                    <td className="py-4 px-3"></td>
+                                                    <td className="py-4 px-3">{formatCurrency(footerTotals.currentSpend)}</td>
+                                                    <td className="py-4 px-3">
+                                                        <span>{formatCurrency(footerTotals.parcial100)}</span>
+                                                    </td>
+                                                    <td className="py-4 px-3"></td>
+                                                    <td className="py-4 px-3">
+                                                        <span>{formatCurrency(footerTotals.investDia100)}/dia</span>
+                                                    </td>
+                                                    <td className="py-4 px-3 text-center">
+                                                        {(() => {
+                                                            const totalPercent = footerTotals.budget > 0 ? (footerTotals.currentSpend / footerTotals.budget) * 100 : 0;
+                                                            // Calculate global percent time based on the first campaign or default to 0 if list empty
+                                                            // We assume all campaigns in view largely share the same 'month progress' context.
+                                                            // Creating a dummy calc to get percentTime
+                                                            const referenceCampaign = filteredCampaigns[0];
+                                                            // Always gray style as requested
+                                                            let badgeColor = 'bg-element-light text-text-primary-light border border-border-light px-2 py-0.5 rounded-full';
+
+                                                            return (
+                                                                <span className={cn("inline-flex items-center justify-center text-xs font-bold", badgeColor)}>
+                                                                    {totalPercent.toFixed(1)}%
+                                                                </span>
+                                                            );
+                                                        })()}
+                                                    </td>
+                                                    <td className="py-4 px-3"></td>
+                                                    <td className="py-4 pr-6 rounded-br-xl"></td>
+                                                </tr>
+                                            </tfoot>
                                         </table>
                                     </DragDropContext>
                                 </div>
