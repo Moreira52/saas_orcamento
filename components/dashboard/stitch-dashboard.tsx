@@ -204,7 +204,8 @@ export default function StitchDashboard({
             meta_ads: { label: 'Meta Ads', iconSrc: '/channel-icons/meta-ads.png', colorBg: commonBg },
             google_ads: { label: 'Google Ads', iconSrc: '/channel-icons/google-ads.png', colorBg: commonBg },
             linkedin_ads: { label: 'LinkedIn Ads', iconSrc: '/channel-icons/linkedin-ads.png', colorBg: commonBg },
-            tiktok_ads: { label: 'TikTok Ads', iconEmoji: '🎵', colorBg: commonBg },
+            tiktok_ads: { label: 'TikTok Ads', iconSrc: '/channel-icons/tiktok.png', colorBg: commonBg },
+            tiktok: { label: 'TikTok Ads', iconSrc: '/channel-icons/tiktok.png', colorBg: commonBg },
             pinterest_ads: { label: 'Pinterest Ads', iconSrc: '/channel-icons/pinterest-ads.png', colorBg: commonBg },
             other: { label: 'Outro', iconEmoji: '🌐', colorBg: commonBg },
         };
@@ -556,6 +557,7 @@ export default function StitchDashboard({
                                                     <th className="pb-4 pl-2 text-xs font-semibold text-text-muted-light uppercase tracking-wider min-w-[220px] align-bottom">Canal / Campanha</th>
                                                     <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider min-w-[120px] text-blue-500 align-bottom">Plano de Mídia</th>
                                                     <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider min-w-[130px] align-bottom">Período</th>
+                                                    <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider min-w-[120px] align-bottom"> % Tempo </th>
                                                     <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider text-center align-bottom">Meta</th>
                                                     <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider text-text-primary-light min-w-[140px] align-bottom">Investimento <br />Utilizado</th>
                                                     <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider min-w-[120px] align-bottom">Parciais</th>
@@ -563,7 +565,7 @@ export default function StitchDashboard({
                                                     <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider min-w-[120px] align-bottom">Investimento <br />/ Dia</th>
                                                     <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider text-center align-bottom">% Gasto <br />Real</th>
                                                     <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider text-center align-bottom">Status</th>
-                                                    <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider min-w-[120px] align-bottom"> % Tempo </th>
+
 
                                                     <th className="pb-4 pr-6 text-xs font-semibold text-text-muted-light uppercase tracking-wider text-right align-bottom">Ações</th>
                                                 </tr>
@@ -585,7 +587,7 @@ export default function StitchDashboard({
                                                                 campaign.current_spend
                                                             );
 
-                                                            const percentMeta = calculation.percentMeta;
+                                                            const percentMeta = calculation.parcial100 > 0 ? (campaign.current_spend / calculation.parcial100) * 100 : 0;
                                                             const statusDisplay = {
                                                                 running: { label: 'Running', color: 'text-green-600 bg-green-500/10 border-green-500/20' },
                                                                 paused: { label: 'Paused', color: 'text-yellow-600 bg-yellow-500/10 border-yellow-500/20' },
@@ -665,6 +667,15 @@ export default function StitchDashboard({
                                                                                         return `${formatDate(campaign.start_date)} - ${formatDate(campaign.end_date)}`;
                                                                                     })()}
                                                                                 </span>
+                                                                            </td>
+
+                                                                            <td className="py-4 px-3 align-middle">
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <div className="w-full bg-element-light rounded-full h-1.5">
+                                                                                        <div className="bg-text-primary-light h-1.5 rounded-full" style={{ width: `${Math.min(calculation.percentTime, 100)}%` }}></div>
+                                                                                    </div>
+                                                                                    <span className="text-xs font-medium min-w-[30px]">{calculation.percentTime.toFixed(0)}%</span>
+                                                                                </div>
                                                                             </td>
 
                                                                             <td className="py-4 px-3 align-middle text-center">
@@ -752,14 +763,7 @@ export default function StitchDashboard({
                                                                                 </span>
                                                                             </td>
 
-                                                                            <td className="py-4 px-3 align-middle">
-                                                                                <div className="flex items-center gap-2">
-                                                                                    <div className="w-full bg-element-light rounded-full h-1.5">
-                                                                                        <div className="bg-text-primary-light h-1.5 rounded-full" style={{ width: `${Math.min(calculation.percentTime, 100)}%` }}></div>
-                                                                                    </div>
-                                                                                    <span className="text-xs font-medium min-w-[30px]">{calculation.percentTime.toFixed(0)}%</span>
-                                                                                </div>
-                                                                            </td>
+
 
 
 
