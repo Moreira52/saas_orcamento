@@ -441,12 +441,12 @@ export default function StitchDashboard({
                             {/* Top Bar */}
                             <div className="flex flex-wrap items-center justify-between gap-4">
                                 <div className="flex items-center gap-4">
-                                    <h2 className="text-3xl font-bold uppercase tracking-wide text-text-primary-light">Budget Overview</h2>
+                                    <h2 className="text-3xl font-bold uppercase tracking-wide text-text-primary-light">Overview de Investimento</h2>
                                 </div>
                                 <div className="flex items-center gap-3">
                                     {activeClient && (
                                         <>
-                                            <div className="flex items-center gap-2 mr-2 px-3 py-1.5 bg-card-light border border-border-light rounded-lg shadow-sm">
+                                            <div className="flex items-center gap-2 mr-2 px-3 py-1.5 text-sm font-medium text-text-muted-light hover:text-text-primary-light hover:bg-card-hover-light rounded-lg transition-colors cursor-default">
                                                 <Calendar className="h-4 w-4 text-text-muted-light" />
                                                 <span className="text-sm font-bold text-text-primary-light capitalize">
                                                     {(() => {
@@ -882,7 +882,11 @@ export default function StitchDashboard({
                                                     <td className="py-4 px-3">
                                                         <span>{formatCurrency(footerTotals.parcial100)}</span>
                                                     </td>
-                                                    <td className="py-4 px-3"></td>
+                                                    <td className="py-4 px-3">
+                                                        {footerTotals.parcial100 > 0
+                                                            ? ((footerTotals.currentSpend / footerTotals.parcial100) * 100).toFixed(1) + '%'
+                                                            : '0.0%'}
+                                                    </td>
                                                     <td className="py-4 px-3">
                                                         <span>{formatCurrency(footerTotals.investDia100)}/dia</span>
                                                     </td>
