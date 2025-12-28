@@ -29,7 +29,7 @@ export default function HomePage() {
   const router = useRouter();
   const [sessionLoading, setSessionLoading] = useState(true);
   const [userRole, setUserRole] = useState<'admin' | 'analyst' | 'pm' | null>(null);
-  const [currentUser, setCurrentUser] = useState<{ name: string; email: string; role: 'admin' | 'analyst' | 'pm'; avatar_url?: string | null } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ id: string; name: string; email: string; role: 'admin' | 'analyst' | 'pm'; avatar_url?: string | null } | null>(null);
 
   // States for Admin Filter
   const [analysts, setAnalysts] = useState<any[]>([]);
@@ -71,7 +71,7 @@ export default function HomePage() {
       const avatar_url = userData?.avatar_url || null;
 
       setUserRole(role);
-      setCurrentUser({ name, email, role, avatar_url });
+      setCurrentUser({ id: session.user.id, name, email, role, avatar_url }); // Include ID
 
       // If Admin/PM, fetch analysts list for filter
       if (role === 'admin' || role === 'pm') {
@@ -98,7 +98,7 @@ export default function HomePage() {
 
   // Buscar clientes (Modified to include analyst_id filter)
   const { data: clientsData, isLoading: loadingClients } = useQuery({
-    queryKey: ['clients', selectedAnalystId], // Refetch when filter changes
+    queryKey: ['clients', selectedAnalystId, currentUser?.id], // Include currentUser.id to force refetch on user switch
     queryFn: async () => {
       let url = '/api/clients';
       if (selectedAnalystId && selectedAnalystId !== 'all') {
@@ -108,7 +108,7 @@ export default function HomePage() {
       if (!res.ok) throw new Error('Erro ao buscar clientes');
       return res.json();
     },
-    enabled: !sessionLoading, // Only fetch after session check
+    enabled: !sessionLoading && !!currentUser, // Only fetch after session check and user is set
   });
 
   const clients: Client[] = clientsData?.data || [];
@@ -124,7 +124,7 @@ export default function HomePage() {
 
   // Buscar campanhas do cliente ativo
   const { data: campaignsData, isLoading: loadingCampaigns } = useQuery({
-    queryKey: ['campaigns', activeClientId, selectedMonth],
+    queryKey: ['campaigns', activeClientId, selectedMonth, currentUser?.id], // Also robust here
     queryFn: async () => {
       if (!activeClientId) return { data: [] };
       const res = await fetch(
@@ -184,6 +184,7 @@ export default function HomePage() {
   });
 
   const handleLogout = async () => {
+    queryClient.removeQueries(); // Clear all cache on logout
     await supabase.auth.signOut();
     router.push('/login');
   };
@@ -231,7 +232,7 @@ export default function HomePage() {
     monthProgress = 0;
   } else {
     const totalDays = differenceInDays(endOfSelectedMonth, startOfSelectedMonth) + 1;
-    const daysPassed = differenceInDays(today, startOfSelectedMonth) + 1;
+    const daysPassed = differenceInDays(today, startOfSelectedMonth);
     monthProgress = (daysPassed / totalDays) * 100;
   }
 

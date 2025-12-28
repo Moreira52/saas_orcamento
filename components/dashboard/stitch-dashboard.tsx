@@ -295,7 +295,7 @@ export default function StitchDashboard({
                                 <span className="hidden lg:inline">Nova Campanha</span>
                             </button>
 
-                            {(userRole === 'admin' || userRole === 'pm') && (
+                            {(userRole === 'admin' || userRole === 'pm' || userRole === 'analyst') && (
                                 <button
                                     onClick={onNewClient}
                                     className="flex-shrink-0 w-11 h-11 rounded-full bg-card-light border border-border-light flex items-center justify-center text-text-muted-light hover:text-accent-primary hover:border-accent-primary hover:bg-card-hover-light transition-all shadow-sm"
@@ -533,7 +533,7 @@ export default function StitchDashboard({
                                         </div>
                                     </div>
                                     <p className="text-xs text-text-muted-light">
-                                        {Math.floor((monthProgress / 100) * 30)} dias percorridos
+                                        {Math.round((monthProgress / 100) * new Date(parseInt(selectedMonth.split('-')[0]), parseInt(selectedMonth.split('-')[1]), 0).getDate())} dias percorridos
                                     </p>
                                 </div>
                             </div>
