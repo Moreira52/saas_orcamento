@@ -16,6 +16,7 @@ import { User, Client, Campaign } from '@/types/database';
 interface AnalystWithClients {
     analyst: User;
     clients: Client[];
+    squadName?: string;
 }
 
 export default function AdminOverviewPage() {
@@ -77,11 +78,20 @@ export default function AdminOverviewPage() {
 
             if (!clients) return;
 
+            // 2.5 Fetch Squads
+            const { data: squads } = await supabase
+                .from('squads')
+                .select('id, name');
+
             // 3. Bind Clients to Analysts
-            const grouped: AnalystWithClients[] = analysts.map(analyst => ({
-                analyst,
-                clients: clients.filter(c => c.analyst_id === analyst.id)
-            }));
+            const grouped: AnalystWithClients[] = analysts.map(analyst => {
+                const squad = squads?.find(s => s.id === analyst.squad_id);
+                return {
+                    analyst,
+                    clients: clients.filter(c => c.analyst_id === analyst.id),
+                    squadName: squad ? squad.name : 'Sem Squad'
+                };
+            });
 
             // Filter out analysts with no clients if user desires, or keep them. 
             // Keeping them is better for visibility (Analyst with 0 clients).
@@ -132,18 +142,21 @@ export default function AdminOverviewPage() {
 
                 {loading ? (
                     <div className="flex items-center justify-center p-12">
-                        <span className="loading loading-spinner text-accent-primary">Carregando dados...</span>
+                        <span className="loading loading-spinner text-text-primary-light">Carregando dados...</span>
                     </div>
                 ) : (
                     <div className="space-y-12">
-                        {analystsData.map(({ analyst, clients }) => (
+                        {analystsData.map(({ analyst, clients, squadName }) => (
                             <div key={analyst.id} className="space-y-4">
                                 <div className="flex items-center gap-2">
                                     <div className="w-8 h-8 rounded-full bg-element-light flex items-center justify-center text-xs font-bold border border-border-light text-text-muted-light">
                                         {analyst.name.substring(0, 2).toUpperCase()}
                                     </div>
-                                    <h3 className="text-lg font-bold text-text-primary-light">
+                                    <h3 className="text-lg font-bold text-text-primary-light flex items-center gap-2">
                                         {analyst.name}
+                                        <span className="text-sm font-normal text-text-muted-light">
+                                            | {squadName}
+                                        </span>
                                     </h3>
                                     <Badge variant="outline" className="bg-element-light text-text-muted-light border-border-light">
                                         {clients.length} Clientes
@@ -235,7 +248,7 @@ function ClientOverviewCard({ client, campaigns, selectedMonth }: { client: Clie
     return (
         <Card className="hover:shadow-lg transition-all border-border-light bg-card-light dark:bg-card-light">
             <CardHeader className="pb-2">
-                <CardTitle className="text-base font-bold text-accent-primary uppercase truncate" title={client.name}>
+                <CardTitle className="text-base font-bold text-text-primary-light uppercase truncate" title={client.name}>
                     {client.name}
                 </CardTitle>
             </CardHeader>

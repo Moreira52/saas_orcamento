@@ -1,52 +1,66 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { supabase } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { useTheme } from 'next-themes';
 import { Loader2, LayoutDashboard, Eye, EyeOff, Sun, Moon } from 'lucide-react';
 
-export default function LoginPage() {
+export default function UpdatePasswordPage() {
     const { setTheme, theme } = useTheme();
-    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const router = useRouter();
 
-    const handleLogin = async (e: React.FormEvent) => {
+    useEffect(() => {
+        // Check if we have a session. The password reset link logs the user in.
+        const checkSession = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                // If no session, maybe the link is invalid or expired
+                toast.error('Sessão inválida ou expirada. Tente solicitar a redefinição novamente.');
+                router.push('/forgot-password');
+            }
+        };
+        checkSession();
+    }, [router]);
+
+    const handleUpdatePassword = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (password !== confirmPassword) {
+            toast.error('As senhas não coincidem.');
+            return;
+        }
+
+        if (password.length < 6) {
+            toast.error('A senha deve ter pelo menos 6 caracteres.');
+            return;
+        }
+
         setLoading(true);
 
         try {
-            console.log('Tentando login com:', email);
-            const { data, error } = await supabase.auth.signInWithPassword({
-                email,
-                password,
+            const { error } = await supabase.auth.updateUser({
+                password: password
             });
 
-            console.log('Resposta Supabase:', { data, error });
-
             if (error) {
-                console.error('Erro de login:', error);
-                toast.error('Erro ao fazer login: ' + error.message);
+                toast.error('Erro ao atualizar senha: ' + error.message);
                 return;
             }
 
-            if (data.user) {
-                console.log('Login sucesso, redirecionando...');
-                toast.success('Login realizado com sucesso!');
-                router.refresh(); // Força atualização dos server components/cookies
-                router.push('/');
-            }
+            toast.success('Senha atualizada com sucesso!');
+            router.push('/');
         } catch (error) {
-            console.error('Erro try/catch:', error);
+            console.error('Erro:', error);
             toast.error('Ocorreu um erro inesperado.');
         } finally {
             setLoading(false);
@@ -63,9 +77,9 @@ export default function LoginPage() {
                         </div>
                         <h1 className="text-2xl font-bold tracking-tight text-text-primary-light uppercase">Budget Box</h1>
                     </div>
-                    <h2 className="text-xl font-semibold tracking-tight text-text-primary-light">Bem-vindo de volta</h2>
+                    <h2 className="text-xl font-semibold tracking-tight text-text-primary-light">Nova Senha</h2>
                     <p className="text-text-muted-light">
-                        Entre com suas credenciais para acessar o painel
+                        Defina sua nova senha de acesso
                     </p>
                 </div>
 
@@ -81,30 +95,13 @@ export default function LoginPage() {
                 </div>
 
                 <Card className="bg-card-light border-border-light rounded-3xl shadow-[0_0_40px_rgba(0,0,0,0.05)]">
-                    <form onSubmit={handleLogin}>
+                    <form onSubmit={handleUpdatePassword}>
                         <CardHeader>
-                            <CardTitle className="text-center text-lg uppercase tracking-wide text-text-primary-light">Login</CardTitle>
+                            <CardTitle className="text-center text-lg uppercase tracking-wide text-text-primary-light">Atualizar Senha</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-5">
                             <div className="space-y-2">
-                                <Label htmlFor="email" className="text-text-primary-light font-medium">Email</Label>
-                                <Input
-                                    id="email"
-                                    type="email"
-                                    placeholder="seu@email.com"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    required
-                                    className="h-12 rounded-xl bg-card-light dark:bg-element-light border-border-light focus:ring-accent-primary focus:border-accent-primary"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <Label htmlFor="password" className="text-text-primary-light font-medium">Senha</Label>
-                                    <Link href="/forgot-password" className="text-xs font-semibold text-text-muted-light hover:text-accent-primary transition-colors">
-                                        Esqueci a senha
-                                    </Link>
-                                </div>
+                                <Label htmlFor="password" className="text-text-primary-light font-medium">Nova Senha</Label>
                                 <div className="relative">
                                     <Input
                                         id="password"
@@ -128,6 +125,17 @@ export default function LoginPage() {
                                     </button>
                                 </div>
                             </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="confirmPassword" className="text-text-primary-light font-medium">Confirmar Senha</Label>
+                                <Input
+                                    id="confirmPassword"
+                                    type={showPassword ? "text" : "password"}
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    required
+                                    className="h-12 rounded-xl bg-card-light dark:bg-element-light border-border-light focus:ring-accent-primary focus:border-accent-primary"
+                                />
+                            </div>
                         </CardContent>
                         <CardFooter className="flex flex-col gap-4 pt-2">
                             <Button
@@ -138,22 +146,16 @@ export default function LoginPage() {
                                 {loading ? (
                                     <>
                                         <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                                        Entrando...
+                                        Atualizando...
                                     </>
                                 ) : (
-                                    'Entrar'
+                                    'Atualizar Senha'
                                 )}
                             </Button>
-                            <div className="text-center text-sm text-text-muted-light">
-                                Não tem uma conta?{' '}
-                                <Link href="/register" className="text-text-primary-light font-semibold hover:text-accent-primary underline transition-colors">
-                                    Cadastre-se
-                                </Link>
-                            </div>
                         </CardFooter>
                     </form>
                 </Card>
             </div>
-        </div >
+        </div>
     );
 }
