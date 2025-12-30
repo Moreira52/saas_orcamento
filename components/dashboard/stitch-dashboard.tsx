@@ -279,10 +279,13 @@ export default function StitchDashboard({
                             )}
 
                             <MonthYearPicker
-                                className="w-11 h-11 rounded-full border-border-light bg-card-light text-text-primary-light font-medium hover:bg-card-hover-light focus:ring-accent-primary transition-all shadow-sm cursor-pointer"
+                                className={cn(
+                                    "h-11 rounded-full border-border-light bg-card-light text-text-primary-light font-medium hover:bg-card-hover-light focus:ring-accent-primary transition-all shadow-sm cursor-pointer",
+                                    (userRole === 'analyst' || userRole === 'pm') ? "w-auto px-4" : "w-11"
+                                )}
                                 value={selectedMonth}
                                 onChange={onMonthChange}
-                                iconOnly
+                                iconOnly={userRole !== 'analyst' && userRole !== 'pm'}
                             />
 
                             {currentUser?.role === 'admin' && (
@@ -446,17 +449,19 @@ export default function StitchDashboard({
                                 <div className="flex items-center gap-3">
                                     {activeClient && (
                                         <>
-                                            <div className="flex items-center gap-2 mr-2 px-3 py-1.5 text-sm font-medium text-text-muted-light hover:text-text-primary-light hover:bg-card-hover-light rounded-lg transition-colors cursor-default">
-                                                <Calendar className="h-4 w-4 text-text-muted-light" />
-                                                <span className="text-sm font-bold text-text-primary-light capitalize">
-                                                    {(() => {
-                                                        const [y, m] = selectedMonth.split('-').map(Number);
-                                                        const date = new Date(y, m - 1);
-                                                        const monthName = date.toLocaleDateString('pt-BR', { month: 'long' });
-                                                        return `${monthName} ${y}`;
-                                                    })()}
-                                                </span>
-                                            </div>
+                                            {(userRole !== 'analyst' && userRole !== 'pm') && (
+                                                <div className="flex items-center gap-2 mr-2 px-3 py-1.5 text-sm font-medium text-text-muted-light hover:text-text-primary-light hover:bg-card-hover-light rounded-lg transition-colors cursor-default">
+                                                    <Calendar className="h-4 w-4 text-text-muted-light" />
+                                                    <span className="text-sm font-bold text-text-primary-light capitalize">
+                                                        {(() => {
+                                                            const [y, m] = selectedMonth.split('-').map(Number);
+                                                            const date = new Date(y, m - 1);
+                                                            const monthName = date.toLocaleDateString('pt-BR', { month: 'long' });
+                                                            return `${monthName} ${y}`;
+                                                        })()}
+                                                    </span>
+                                                </div>
+                                            )}
                                             <button
                                                 onClick={() => onEditClient(activeClient)}
                                                 className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-text-muted-light hover:text-text-primary-light hover:bg-card-hover-light rounded-lg transition-colors"
