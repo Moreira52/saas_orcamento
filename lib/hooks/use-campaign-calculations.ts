@@ -40,9 +40,9 @@ export function useCampaignCalculations(
     const totalDays = differenceInDays(end, start) + 1;
 
     let daysPassed = 0;
-    if (isPast(end)) {
+    if (today > end) {
         daysPassed = totalDays;
-    } else if (isFuture(start)) {
+    } else if (today < start) {
         daysPassed = 0;
     } else {
         daysPassed = differenceInDays(today, start);
@@ -71,7 +71,7 @@ export function useCampaignCalculations(
     let status: CampaignCalculations['status'];
     let statusColor: string;
 
-    if (isPast(end)) {
+    if (today > end) {
         status = 'finished';
         statusColor = 'bg-gray-100 text-gray-600 border-gray-300';
     } else {
