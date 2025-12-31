@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, handleSupabaseError } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
+import { handleSupabaseError } from '@/lib/supabase/client';
 
-// PATCH /api/campaigns/[id] - Atualizar campanha
 // PATCH /api/campaigns/[id] - Atualizar campanha
 export async function PATCH(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const supabase = await createClient();
         const { id } = await params;
         const body = await request.json();
         const { current_spend, observations, campaign_type, channel, meta_percentage } = body;
@@ -67,6 +68,7 @@ export async function DELETE(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const supabase = await createClient();
         const { id } = await params;
         const { data: campaign, error: fetchError } = await supabase
             .from('campaigns')

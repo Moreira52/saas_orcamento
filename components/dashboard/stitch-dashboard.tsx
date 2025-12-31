@@ -634,6 +634,7 @@ export default function StitchDashboard({
                                                     <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider min-w-[120px] align-bottom"> % Tempo </th>
                                                     <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider text-center align-bottom">Meta</th>
                                                     <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider text-text-primary-light min-w-[140px] align-bottom">Investimento <br />Utilizado</th>
+                                                    <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider min-w-[80px] align-bottom">Última <br />Edição</th>
                                                     <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider min-w-[120px] align-bottom">Parciais</th>
                                                     <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider text-center align-bottom">% Meta</th>
                                                     <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider min-w-[120px] align-bottom">Investimento <br />/ Dia</th>
@@ -804,6 +805,28 @@ export default function StitchDashboard({
                                                                                         <span className="text-sm font-extrabold text-text-primary-light text-lg">{formatCurrency(campaign.current_spend)}</span>
                                                                                     </div>
                                                                                 )}
+                                                                            </td>
+
+                                                                            <td className="py-4 px-3 align-middle whitespace-nowrap">
+                                                                                {(() => {
+                                                                                    // @ts-ignore
+                                                                                    const { last_editor_name, last_budget_updated_at } = campaign;
+                                                                                    if (!last_budget_updated_at) {
+                                                                                        return <span className="text-[10px] text-gray-500">-</span>;
+                                                                                    }
+                                                                                    const dateObj = new Date(last_budget_updated_at);
+                                                                                    const dateStr = dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                                                                                    const timeStr = dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+                                                                                    return (
+                                                                                        <div className="flex flex-col text-[10px] leading-tight text-text-muted-light">
+                                                                                            <span className="font-semibold text-text-primary-light truncate max-w-[80px]" title={last_editor_name || 'Desconhecido'}>
+                                                                                                {last_editor_name || 'Desconhecido'}
+                                                                                            </span>
+                                                                                            <span>{dateStr} {timeStr}</span>
+                                                                                        </div>
+                                                                                    );
+                                                                                })()}
                                                                             </td>
 
                                                                             <td className="py-4 px-3 align-middle whitespace-nowrap">

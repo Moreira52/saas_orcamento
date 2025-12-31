@@ -15,10 +15,11 @@ import { formatCurrency, formatPercentage } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { Trash2, FileText } from 'lucide-react';
+import { Trash2, FileText, History as HistoryIcon } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useDebounce } from '@/lib/hooks/use-debounce';
 import ObservationsModal from '@/components/modals/observations-modal';
+import BudgetHistoryModal from '@/components/modals/budget-history-modal';
 
 interface CampaignsTableProps {
     campaigns: Campaign[];
@@ -35,6 +36,7 @@ export default function CampaignsTable({
     const [editValue, setEditValue] = useState<string>('');
     const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
     const [showObservationsModal, setShowObservationsModal] = useState(false);
+    const [showHistoryModal, setShowHistoryModal] = useState(false);
 
     const queryClient = useQueryClient();
     const debouncedValue = useDebounce(editValue, 1000);
@@ -366,6 +368,34 @@ export default function CampaignsTable({
                 },
             },
 
+            // NOVA COLUNA: Última Edição (Logo após o campo editável)
+            {
+                id: 'last_update',
+                header: 'Última Edição',
+                cell: ({ row }) => {
+                    const { last_editor_name, last_budget_updated_at } = row.original;
+
+                    if (!last_budget_updated_at) {
+                        return <span className="text-[10px] text-gray-300">-</span>;
+                    }
+
+                    const dateObj = new Date(last_budget_updated_at);
+                    const dateStr = dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                    const timeStr = dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+                    return (
+                        <div className="flex flex-col text-[10px] leading-tight text-gray-500 min-w-[80px]">
+                            <span className="font-semibold text-gray-700 truncate max-w-[80px]" title={last_editor_name || 'Desconhecido'}>
+                                {last_editor_name || 'Desconhecido'}
+                            </span>
+                            <span>
+                                {dateStr} {timeStr}
+                            </span>
+                        </div>
+                    );
+                },
+            },
+
             // COLUNA 8: Parcial 100%
             {
                 id: 'parcial_100',
@@ -543,6 +573,19 @@ export default function CampaignsTable({
                                 size="sm"
                                 onClick={() => {
                                     setSelectedCampaign(row.original);
+                                    setShowHistoryModal(true);
+                                }}
+                                title="Histórico de alterações"
+                                className="text-gray-500 hover:text-blue-600 hover:bg-blue-50"
+                            >
+                                <HistoryIcon className="h-4 w-4" />
+                            </Button>
+
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                    setSelectedCampaign(row.original);
                                     setShowObservationsModal(true);
                                 }}
                                 title="Editar observações"
@@ -570,6 +613,9 @@ export default function CampaignsTable({
         ],
         [editingCell, editValue]
     );
+
+    // Debug logging
+    console.log('Rendering CampaignsTable. Columns count:', columns.length);
 
     const table = useReactTable({
         data: campaigns,
@@ -625,6 +671,15 @@ export default function CampaignsTable({
                         await onUpdate(selectedCampaign.id, data);
                     }
                 }}
+            />
+
+            <BudgetHistoryModal
+                open={showHistoryModal}
+                onClose={() => {
+                    setShowHistoryModal(false);
+                    setSelectedCampaign(null);
+                }}
+                campaign={selectedCampaign}
             />
         </>
     );

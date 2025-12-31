@@ -60,4 +60,7 @@ export interface Campaign {
     created_at: string;
     updated_at: string;
     position: number;
+    last_budget_updated_at?: string | null;
+    last_budget_updated_by?: string | null;
+    last_editor_name?: string; // Virtual field from join
 }

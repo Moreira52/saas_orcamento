@@ -1,10 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, handleSupabaseError } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
+import { handleSupabaseError } from '@/lib/supabase/client';
 import { differenceInDays, format, startOfMonth, endOfMonth, eachMonthOfInterval } from 'date-fns';
+
+// Helper for name formatting
+const formatName = (fullName: string) => {
+    if (!fullName) return 'Desconhecido';
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length <= 1) return parts[0];
+    return `${parts[0]} ${parts[1]}`;
+};
 
 // GET /api/campaigns?client_id=xxx&month_year=2025-11
 export async function GET(request: NextRequest) {
     try {
+        const supabase = await createClient();
         const { searchParams } = new URL(request.url);
         const clientId = searchParams.get('client_id');
         const monthYear = searchParams.get('month_year');
@@ -19,7 +29,10 @@ export async function GET(request: NextRequest) {
         // Tenta buscar ordenado por posição para suportar Drag and Drop
         let query = supabase
             .from('campaigns')
-            .select('*')
+            .select(`
+                *,
+                last_editor:users!last_budget_updated_by(name)
+            `)
             .eq('client_id', clientId)
             .order('position', { ascending: true });
 
@@ -29,13 +42,16 @@ export async function GET(request: NextRequest) {
 
         const { data, error } = await query;
 
-        // Fallback: Se der erro (provavelmente coluna 'position' inexistente), tenta ordenar por created_at
+        // Fallback
         if (error) {
-            console.warn('Erro ao buscar ordenado por posição (provável falta de migração), tentando fallback:', error.message);
+            console.warn('Erro ao buscar ordenado por posição, tentando fallback:', error.message);
 
             let fallbackQuery = supabase
                 .from('campaigns')
-                .select('*')
+                .select(`
+                    *,
+                    last_editor:users!last_budget_updated_by(name)
+                `)
                 .eq('client_id', clientId)
                 .order('created_at', { ascending: true });
 
@@ -49,10 +65,20 @@ export async function GET(request: NextRequest) {
                 return NextResponse.json(handleSupabaseError(fallbackError), { status: 500 });
             }
 
-            return NextResponse.json({ success: true, data: fallbackData });
+            const mappedData = fallbackData?.map((campaign: any) => ({
+                ...campaign,
+                last_editor_name: formatName(campaign.last_editor?.name)
+            }));
+
+            return NextResponse.json({ success: true, data: mappedData });
         }
 
-        return NextResponse.json({ success: true, data });
+        const mappedData = data?.map((campaign: any) => ({
+            ...campaign,
+            last_editor_name: formatName(campaign.last_editor?.name)
+        }));
+
+        return NextResponse.json({ success: true, data: mappedData });
     } catch (error) {
         console.error('GET /api/campaigns error:', error);
         return NextResponse.json(
@@ -65,6 +91,7 @@ export async function GET(request: NextRequest) {
 // POST /api/campaigns - Criar campanha (com split automático multi-mês)
 export async function POST(request: NextRequest) {
     try {
+        const supabase = await createClient();
         const body = await request.json();
         const {
             client_id,
