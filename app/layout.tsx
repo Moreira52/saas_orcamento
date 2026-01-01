@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google'; // Google Font
+import { Montserrat } from 'next/font/google'; // Google Font
 import './globals.css';
 import QueryProvider from '@/components/providers/query-provider';
 
 // Configurar fonte Inter (mesma do Vercel/Linear)
-const inter = Inter({ subsets: ['latin'] });
+const montserrat = Montserrat({ subsets: ['latin'], variable: '--font-montserrat' });
 
 export const metadata: Metadata = {
   title: 'Budget Tracker - Gerenciamento de Tráfego Pago',
@@ -20,7 +20,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body className={inter.className} suppressHydrationWarning>
+      <body className={`${montserrat.className} ${montserrat.variable} font-thin antialiased`} suppressHydrationWarning>
         {/* QueryProvider envolve todo app = React Query disponível em qualquer componente */}
         <QueryProvider>
           <ThemeProvider
