@@ -20,7 +20,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body className={`${montserrat.className} ${montserrat.variable} font-thin antialiased`} suppressHydrationWarning>
+      <body className={`${montserrat.className} ${montserrat.variable} font-bold antialiased`} suppressHydrationWarning>
         {/* QueryProvider envolve todo app = React Query disponível em qualquer componente */}
         <QueryProvider>
           <ThemeProvider
