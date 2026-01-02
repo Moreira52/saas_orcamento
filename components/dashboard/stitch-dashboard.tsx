@@ -872,7 +872,7 @@ export default function StitchDashboard({
                                                                                             setShowObservationsModal(true);
                                                                                         }}
                                                                                         className="text-text-muted-light hover:text-text-primary-light transition-colors p-1"
-                                                                                        title="Editar observações"
+                                                                                        title="Editar Campanha"
                                                                                     >
                                                                                         <FileText className="h-4 w-4" />
                                                                                     </button>

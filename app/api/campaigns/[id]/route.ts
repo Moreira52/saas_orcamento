@@ -11,7 +11,7 @@ export async function PATCH(
         const supabase = await createClient();
         const { id } = await params;
         const body = await request.json();
-        const { current_spend, observations, campaign_type, channel, meta_percentage } = body;
+        const { current_spend, observations, campaign_type, channel, meta_percentage, budget } = body;
 
         const updateData: any = {
             updated_at: new Date().toISOString(),
@@ -22,6 +22,7 @@ export async function PATCH(
         if (observations !== undefined) updateData.observations = observations;
         if (campaign_type !== undefined) updateData.campaign_type = campaign_type;
         if (channel !== undefined) updateData.channel = channel;
+        if (budget !== undefined) updateData.budget = budget;
 
         // NOVO: Permitir editar meta_percentage
         if (meta_percentage !== undefined) {

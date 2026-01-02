@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase/client'; // CLIENT Side
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -27,18 +27,36 @@ import { toast } from 'sonner';
 
 export default function HomePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [sessionLoading, setSessionLoading] = useState(true);
   const [userRole, setUserRole] = useState<'admin' | 'analyst' | 'pm' | null>(null);
   const [currentUser, setCurrentUser] = useState<{ id: string; name: string; email: string; role: 'admin' | 'analyst' | 'pm'; avatar_url?: string | null } | null>(null);
 
   // States for Admin Filter
   const [analysts, setAnalysts] = useState<any[]>([]);
-  const [selectedAnalystId, setSelectedAnalystId] = useState<string>('all');
+  const [selectedAnalystId, setSelectedAnalystId] = useState<string>(() => {
+    return searchParams.get('analyst') || 'all';
+  });
 
   const [selectedMonth, setSelectedMonth] = useState(() => {
+    const urlMonth = searchParams.get('month');
+    if (urlMonth) return urlMonth;
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
+
+  const [activeClientId, setActiveClientId] = useState<string | null>(() => {
+    return searchParams.get('client') || null;
+  });
+
+  const handleClientChange = (id: string) => {
+    setActiveClientId(id);
+    const params = new URLSearchParams(window.location.search);
+    if (id) params.set('client', id);
+    else params.delete('client');
+    router.replace(`/?${params.toString()}`, { scroll: false });
+  };
 
   const [showNewClientModal, setShowNewClientModal] = useState(false);
   const [showNewCampaignModal, setShowNewCampaignModal] = useState(false);
@@ -112,13 +130,15 @@ export default function HomePage() {
   });
 
   const clients: Client[] = clientsData?.data || [];
-  const [activeClientId, setActiveClientId] = useState<string | null>(null);
-
   useEffect(() => {
     if ((!activeClientId || !clients.find(c => c.id === activeClientId)) && clients.length > 0) {
-      setActiveClientId(clients[0].id);
-    } else if (clients.length === 0) {
+      // If current active client is invalid, default to first client and update URL
+      handleClientChange(clients[0].id);
+    } else if (clients.length === 0 && activeClientId) {
       setActiveClientId(null);
+      const params = new URLSearchParams(window.location.search);
+      params.delete('client');
+      router.replace(`/?${params.toString()}`, { scroll: false });
     }
   }, [clients, activeClientId]);
 
@@ -266,14 +286,20 @@ export default function HomePage() {
       <StitchDashboard
         clients={clients}
         activeClientId={activeClientId}
-        setActiveClientId={setActiveClientId}
+        setActiveClientId={handleClientChange}
         campaigns={campaigns}
         totals={totals}
         monthProgress={monthProgress}
         percentMetaTotal={percentMetaTotal}
         onNewCampaign={() => setShowNewCampaignModal(true)}
         selectedMonth={selectedMonth}
-        onMonthChange={setSelectedMonth}
+        onMonthChange={(newMonth) => {
+          setSelectedMonth(newMonth);
+          // Update URL
+          const searchParams = new URLSearchParams(window.location.search);
+          searchParams.set('month', newMonth);
+          router.replace(`/?${searchParams.toString()}`, { scroll: false });
+        }}
         onNewClient={() => setShowNewClientModal(true)}
         onUpdateCampaign={async (id, data) => {
           await updateCampaign.mutateAsync({ id, data });
@@ -293,7 +319,17 @@ export default function HomePage() {
         userRole={userRole}
         analysts={analysts}
         selectedAnalystId={selectedAnalystId}
-        onSelectAnalyst={setSelectedAnalystId}
+        onSelectAnalyst={(analystId) => {
+          setSelectedAnalystId(analystId);
+          // Update URL
+          const searchParams = new URLSearchParams(window.location.search);
+          if (analystId === 'all') {
+            searchParams.delete('analyst');
+          } else {
+            searchParams.set('analyst', analystId);
+          }
+          router.replace(`/?${searchParams.toString()}`, { scroll: false });
+        }}
         onLogout={handleLogout}
         currentUser={currentUser}
       />

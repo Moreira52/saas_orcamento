@@ -588,7 +588,7 @@ export default function CampaignsTable({
                                     setSelectedCampaign(row.original);
                                     setShowObservationsModal(true);
                                 }}
-                                title="Editar observações"
+                                title="Editar Campanha"
                             >
                                 <FileText className="h-4 w-4" />
                             </Button>
