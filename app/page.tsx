@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase/client'; // CLIENT Side
@@ -25,7 +25,7 @@ import { startOfMonth, endOfMonth, differenceInDays, isPast, isFuture } from 'da
 import StitchDashboard from '@/components/dashboard/stitch-dashboard';
 import { toast } from 'sonner';
 
-export default function HomePage() {
+function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -371,5 +371,20 @@ export default function HomePage() {
       />
       <Toaster />
     </>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando...</p>
+        </div>
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
   );
 }
