@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { useTheme } from 'next-themes';
-import { Loader2, LayoutDashboard, Eye, EyeOff, Sun, Moon } from 'lucide-react';
+import { Loader2, LayoutDashboard, Eye, EyeOff, Sun, Moon, AlertCircle } from 'lucide-react';
 
 export default function LoginPage() {
     const { setTheme, theme } = useTheme();
@@ -18,11 +18,13 @@ export default function LoginPage() {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const router = useRouter();
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
+        setErrorMessage(null);
 
         try {
             console.log('Tentando login com:', email);
@@ -35,7 +37,12 @@ export default function LoginPage() {
 
             if (error) {
                 console.error('Erro de login:', error);
-                toast.error('Erro ao fazer login: ' + error.message);
+                if (error.message.includes('Invalid login credentials')) {
+                    setErrorMessage('Senha incorreta');
+                } else {
+                    toast.error('Erro ao fazer login: ' + error.message);
+                }
+                setLoading(false);
                 return;
             }
 
@@ -130,6 +137,12 @@ export default function LoginPage() {
                             </div>
                         </CardContent>
                         <CardFooter className="flex flex-col gap-4 pt-2">
+                            {errorMessage && (
+                                <div className="flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-lg text-sm w-full justify-center">
+                                    <AlertCircle className="h-4 w-4" />
+                                    {errorMessage}
+                                </div>
+                            )}
                             <Button
                                 type="submit"
                                 className="w-full h-12 rounded-full bg-accent-primary text-black font-bold hover:bg-[#B2E030] transition-all shadow-[0_0_15px_rgba(195,245,59,0.3)] text-base"
