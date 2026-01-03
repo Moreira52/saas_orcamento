@@ -37,6 +37,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { LogOut } from 'lucide-react';
 import Image from 'next/image';
+import ImageCropper from '@/components/profile/image-cropper';
+
 
 interface UserProfile {
     id: string;
@@ -77,6 +79,10 @@ export default function ProfilePage() {
     const [newSquadName, setNewSquadName] = useState('');
     const [isAddSquadOpen, setIsAddSquadOpen] = useState(false);
     const [creatingSquad, setCreatingSquad] = useState(false);
+
+    // Cropper State
+    const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+    const [isCropperOpen, setIsCropperOpen] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -164,20 +170,35 @@ export default function ProfilePage() {
         }
     };
 
-    const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.addEventListener('load', () => {
+            setCropImageSrc(reader.result as string || null);
+            setIsCropperOpen(true);
+            // Clear input so same file can be selected again if needed
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        });
+        reader.readAsDataURL(file);
+    };
+
+    const handleCroppedUpload = async (croppedBlob: Blob) => {
         try {
             setUploading(true);
-            const file = event.target.files?.[0];
-            if (!file) return;
+            setIsCropperOpen(false); // Close modal immediately
 
-            const fileExt = file.name.split('.').pop();
+            const fileExt = 'png'; // cropped image is always png
             const fileName = `${user?.id}-${Math.random()}.${fileExt}`;
             const filePath = `${fileName}`;
 
             // Upload to Supabase Storage
             const { error: uploadError } = await supabase.storage
                 .from('avatars')
-                .upload(filePath, file);
+                .upload(filePath, croppedBlob, {
+                    contentType: 'image/png'
+                });
 
             if (uploadError) {
                 throw uploadError;
@@ -185,7 +206,24 @@ export default function ProfilePage() {
 
             // Get Public URL
             const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
-            setAvatarUrl(data.publicUrl);
+            const publicUrl = data.publicUrl;
+
+            // Immediately update user profile in DB
+            const updateRes = await fetch('/api/users/profile', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    avatar_url: publicUrl
+                })
+            });
+
+            if (!updateRes.ok) throw new Error('Falha ao atualizar avatar no perfil');
+
+            setAvatarUrl(publicUrl);
+
+            // Force refresh to update Header and other components
+            router.refresh();
+
             toast.success('Foto de perfil atualizada!');
         } catch (error: any) {
             toast.error('Erro ao fazer upload da imagem: ' + error.message);
@@ -358,7 +396,7 @@ export default function ProfilePage() {
                                         ref={fileInputRef}
                                         className="hidden"
                                         accept="image/png, image/jpeg"
-                                        onChange={handleAvatarUpload}
+                                        onChange={handleFileChange}
                                     />
                                 </div>
                                 <h2 className="mt-4 text-2xl font-bold text-text-primary-light">Editar Perfil</h2>
@@ -590,6 +628,13 @@ export default function ProfilePage() {
                 </Tabs>
             </main>
             <Toaster />
+
+            <ImageCropper
+                open={isCropperOpen}
+                imageSrc={cropImageSrc}
+                onCancel={() => setIsCropperOpen(false)}
+                onCropComplete={handleCroppedUpload}
+            />
         </div>
     );
 }
