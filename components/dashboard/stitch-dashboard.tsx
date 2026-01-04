@@ -955,10 +955,10 @@ export default function StitchDashboard({
                     setSelectedCampaign(null);
                 }}
                 campaign={selectedCampaign}
-                relatedCampaign={selectedCampaign ? campaigns.find(c =>
-                    (c.parent_campaign_id === selectedCampaign.id) ||
-                    (selectedCampaign.parent_campaign_id && c.id === selectedCampaign.parent_campaign_id)
-                ) : null}
+                relatedCampaigns={selectedCampaign ? campaigns.filter(c => {
+                    const parentId = selectedCampaign.parent_campaign_id || selectedCampaign.id;
+                    return c.id !== selectedCampaign.id && (c.id === parentId || c.parent_campaign_id === parentId);
+                }) : []}
                 onSave={async (data) => {
                     if (selectedCampaign) {
                         await onUpdateCampaign(selectedCampaign.id, data);

@@ -79,11 +79,12 @@ export default function NewCampaignModal({ open, onClose, clientId }: NewCampaig
     useEffect(() => {
         if (startDate && endDate) {
             const monthsDiff = differenceInMonths(endDate, startDate);
-            const crossesMonths = monthsDiff > 0;
-            setIsMultiMonth(crossesMonths);
-            setMonthsCount(monthsDiff + 1);
+            const count = monthsDiff + 1;
+            setMonthsCount(count);
+            setIsMultiMonth(monthsDiff > 0);
         } else {
             setIsMultiMonth(false);
+            setMonthsCount(0);
         }
     }, [startDate, endDate]);
 
@@ -134,6 +135,15 @@ export default function NewCampaignModal({ open, onClose, clientId }: NewCampaig
         // Validação adicional: data final >= data inicial
         if (data.end_date < data.start_date) {
             toast.error('Data final deve ser maior ou igual à data inicial');
+            return;
+        }
+
+        // Validação adicional: Máximo 3 meses
+        const monthsDiff = differenceInMonths(data.end_date, data.start_date);
+        const count = monthsDiff + 1;
+
+        if (count > 3) {
+            toast.error('Campanhas multi-mês não podem exceder 3 meses.');
             return;
         }
 

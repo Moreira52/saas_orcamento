@@ -250,14 +250,16 @@ export default function CampaignsTable({
                     if (isEditing) {
                         return (
                             <input
-                                type="number"
+                                type="text"
+                                inputMode="decimal"
                                 autoFocus
                                 step="0.1"
                                 min="0"
                                 max="100"
                                 className="w-20 border-2 border-blue-500 rounded px-2 py-1 text-sm font-semibold"
                                 value={editValue}
-                                onChange={(e) => setEditValue(e.target.value)}
+                                onFocus={() => (editValue === '0' || editValue === '0.00') && setEditValue('')}
+                                onChange={(e) => setEditValue(e.target.value.replace(/\./g, ''))}
                                 onBlur={() => {
                                     if (parseFloat(editValue) !== row.original.meta_percentage) {
                                         handleImmediateSave(campaignId, 'meta_percentage', editValue);
@@ -324,13 +326,15 @@ export default function CampaignsTable({
                     if (isEditing) {
                         return (
                             <input
-                                type="number"
+                                type="text"
+                                inputMode="decimal"
                                 autoFocus
                                 step="0.01"
                                 min="0"
                                 className="w-32 border-2 border-blue-500 rounded px-2 py-1 text-sm font-semibold"
                                 value={editValue}
-                                onChange={(e) => setEditValue(e.target.value)}
+                                onFocus={() => (editValue === '0' || editValue === '0.00') && setEditValue('')}
+                                onChange={(e) => setEditValue(e.target.value.replace(/\./g, ''))}
                                 onBlur={() => {
                                     if (parseFloat(editValue) !== row.original.current_spend) {
                                         handleImmediateSave(campaignId, 'current_spend', editValue);
@@ -666,10 +670,10 @@ export default function CampaignsTable({
                     setSelectedCampaign(null);
                 }}
                 campaign={selectedCampaign}
-                relatedCampaign={selectedCampaign ? campaigns.find(c =>
-                    (c.parent_campaign_id === selectedCampaign.id) ||
-                    (selectedCampaign.parent_campaign_id && c.id === selectedCampaign.parent_campaign_id)
-                ) : null}
+                relatedCampaigns={selectedCampaign ? campaigns.filter(c => {
+                    const parentId = selectedCampaign.parent_campaign_id || selectedCampaign.id;
+                    return c.id !== selectedCampaign.id && (c.id === parentId || c.parent_campaign_id === parentId);
+                }) : []}
                 onSave={async (data) => {
                     if (selectedCampaign) {
                         await onUpdate(selectedCampaign.id, data);
