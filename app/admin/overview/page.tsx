@@ -238,43 +238,116 @@ export default function AdminOverviewPage() {
                 ) : (
                     <div className="space-y-12">
                         {analystsData.map(({ analyst, clients, squadName }) => (
-                            <div key={analyst.id} className="space-y-4">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-8 h-8 rounded-full bg-element-light flex items-center justify-center text-xs font-bold border border-border-light text-text-muted-light">
-                                        {analyst.name.substring(0, 2).toUpperCase()}
-                                    </div>
-                                    <h3 className="text-lg font-bold text-text-primary-light flex items-center gap-2">
-                                        {analyst.name}
-                                        <span className="text-sm font-normal text-text-muted-light">
-                                            | {squadName}
-                                        </span>
-                                    </h3>
-                                    <Badge variant="outline" className="bg-element-light text-text-muted-light border-border-light">
-                                        {clients.length} Clientes
-                                    </Badge>
-                                </div>
-
-                                {clients.length === 0 ? (
-                                    <div className="p-4 rounded-xl border border-dashed border-border-light text-text-muted-light text-sm italic">
-                                        Nenhum cliente vinculado a este analista.
-                                    </div>
-                                ) : (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                                        {clients.map(client => (
-                                            <ClientOverviewCard
-                                                key={client.id}
-                                                client={client}
-                                                campaigns={campaigns.filter(c => c.client_id === client.id)}
-                                                selectedMonth={selectedMonth}
-                                            />
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
+                            <AnalystSection
+                                key={analyst.id}
+                                analyst={analyst}
+                                clients={clients}
+                                squadName={squadName}
+                                campaigns={campaigns.filter(c => clients.some(client => client.id === c.client_id))}
+                                selectedMonth={selectedMonth}
+                            />
                         ))}
                     </div>
                 )}
             </main>
+        </div>
+    );
+}
+
+function AnalystSection({ analyst, clients, squadName, campaigns, selectedMonth }: {
+    analyst: User;
+    clients: Client[];
+    squadName?: string;
+    campaigns: Campaign[];
+    selectedMonth: string;
+}) {
+    // Calculate global stats for this analyst across all their clients
+    const totalBudget = campaigns.reduce((acc, curr) => acc + (curr.budget || 0), 0);
+    const totalSpend = campaigns.reduce((acc, curr) => acc + (curr.current_spend || 0), 0);
+
+    const [year, month] = selectedMonth.split('-').map(Number);
+    const startDate = `${selectedMonth}-01`;
+    // Ensure accurate month end calculation
+    const endDate = format(endOfMonth(new Date(year, month - 1)), 'yyyy-MM-dd');
+
+    // Use hook for partial budget assuming 100% meta
+    const calcs = useCampaignCalculations(
+        totalBudget,
+        100, // Meta 100%
+        startDate,
+        endDate,
+        totalSpend
+    );
+
+    return (
+        <div className="space-y-6">
+            <div className="flex flex-col gap-4">
+                {/* Header */}
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-element-light flex items-center justify-center text-sm font-bold border border-border-light text-text-muted-light shadow-sm">
+                        {analyst.name.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                        <h3 className="text-xl font-bold text-text-primary-light flex items-center gap-2">
+                            {analyst.name}
+                        </h3>
+                        <div className="flex items-center gap-2 text-sm text-text-muted-light">
+                            <span>{squadName}</span>
+                            <span>•</span>
+                            <span className="bg-element-light px-2 py-0.5 rounded-full text-xs font-medium text-text-primary-light border border-border-light">
+                                {clients.length} Clientes
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Aggregated Stats Strip */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-element-light/30 p-4 rounded-xl border border-border-light/50">
+                    <div className="space-y-1">
+                        <p className="text-[10px] uppercase font-bold text-text-muted-light tracking-wider">Plano de Mídia Total</p>
+                        <p className="text-lg font-bold text-text-primary-light">{formatCurrency(totalBudget)}</p>
+                    </div>
+                    <div className="space-y-1">
+                        <div className="flex items-center gap-1.5">
+                            <p className="text-[10px] uppercase font-bold text-text-muted-light tracking-wider">Plano Parcial</p>
+                            <Badge variant="outline" className="h-4 px-1 text-[8px] border-border-light bg-card-light text-text-muted-light">Meta 100%</Badge>
+                        </div>
+                        <p className="text-lg font-bold text-blue-400">{formatCurrency(calcs.parcial97)}</p>
+                    </div>
+                    <div className="space-y-1">
+                        <p className="text-[10px] uppercase font-bold text-text-muted-light tracking-wider">Investimento Utilizado</p>
+                        <p className="text-lg font-bold text-text-primary-light">{formatCurrency(totalSpend)}</p>
+                    </div>
+                    <div className="space-y-1">
+                        <p className="text-[10px] uppercase font-bold text-text-muted-light tracking-wider">% Utilizado</p>
+                        <p className={`text-lg font-bold ${calcs.percentRealSpent > 100 ? 'text-red-500' : 'text-text-primary-light'}`}>
+                            {formatPercentage(calcs.percentRealSpent)}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Clients Grid */}
+            {clients.length === 0 ? (
+                <div className="p-8 rounded-xl border border-dashed border-border-light bg-card-light/50 flex items-center justify-center text-text-muted-light text-sm italic">
+                    Nenhum cliente vinculado a este analista.
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {clients.map(client => (
+                        <ClientOverviewCard
+                            key={client.id}
+                            client={client}
+                            // Only pass this client's campaigns
+                            campaigns={campaigns.filter(c => c.client_id === client.id)}
+                            selectedMonth={selectedMonth}
+                        />
+                    ))}
+                </div>
+            )}
+
+            {/* Divider between analysts if needed, or outer padding handles it */}
+            <div className="h-px bg-border-light/50 w-full" />
         </div>
     );
 }
