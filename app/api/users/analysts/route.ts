@@ -28,6 +28,7 @@ export async function GET() {
             .from('users')
             .select('id, name, email, role')
             .eq('is_active', true)
+            .eq('role', 'analyst')
             .order('name');
 
         if (error) {
