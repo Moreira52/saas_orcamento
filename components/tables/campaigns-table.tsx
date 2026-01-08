@@ -239,60 +239,7 @@ export default function CampaignsTable({
                 },
             },
 
-            // COLUNA 5: Meta %
-            {
-                accessorKey: 'meta_percentage',
-                header: 'Meta',
-                cell: ({ row }) => {
-                    const campaignId = row.original.id;
-                    const isEditing = editingCell === `${campaignId}|meta_percentage`;
 
-                    if (isEditing) {
-                        return (
-                            <input
-                                type="text"
-                                inputMode="decimal"
-                                autoFocus
-                                step="0.1"
-                                min="0"
-                                max="100"
-                                className="w-20 border-2 border-blue-500 rounded px-2 py-1 text-sm font-semibold"
-                                value={editValue}
-                                onFocus={() => (editValue === '0' || editValue === '0.00') && setEditValue('')}
-                                onChange={(e) => setEditValue(e.target.value.replace(/\./g, ''))}
-                                onBlur={() => {
-                                    if (parseFloat(editValue) !== row.original.meta_percentage) {
-                                        handleImmediateSave(campaignId, 'meta_percentage', editValue);
-                                    } else {
-                                        setEditingCell(null);
-                                    }
-                                }}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                        e.preventDefault();
-                                        handleImmediateSave(campaignId, 'meta_percentage', editValue);
-                                    } else if (e.key === 'Escape') {
-                                        setEditingCell(null);
-                                        setEditValue('');
-                                    }
-                                }}
-                            />
-                        );
-                    }
-
-                    return (
-                        <div
-                            onClick={() => {
-                                setEditingCell(`${campaignId}|meta_percentage`);
-                                setEditValue(String(row.original.meta_percentage));
-                            }}
-                            className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded"
-                        >
-                            {row.original.meta_percentage}%
-                        </div>
-                    );
-                },
-            },
 
             // COLUNA 6: Parcial 97%
             {

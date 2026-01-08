@@ -41,7 +41,7 @@ interface ObservationsModalProps {
     onClose: () => void;
     campaign: Campaign | null;
     relatedCampaigns?: Campaign[];
-    onSave: (data: { observations: string; campaign_type: string; budget: number }) => Promise<void>;
+    onSave: (data: { observations: string; campaign_type: string; budget: number; meta_percentage: number }) => Promise<void>;
 }
 
 export default function ObservationsModal({
@@ -54,6 +54,7 @@ export default function ObservationsModal({
     const [observations, setObservations] = useState('');
     const [campaignName, setCampaignName] = useState('');
     const [budget, setBudget] = useState<string>('');
+    const [metaPercentage, setMetaPercentage] = useState<string>('');
     const [localRelatedCampaigns, setLocalRelatedCampaigns] = useState<Campaign[]>([]);
     const [isSaving, setIsSaving] = useState(false);
     const [distributeBudget, setDistributeBudget] = useState(false);
@@ -69,6 +70,7 @@ export default function ObservationsModal({
             setObservations(campaign.observations || '');
             setCampaignName(campaign.campaign_type || '');
             setBudget(campaign.budget?.toString() || '');
+            setMetaPercentage(campaign.meta_percentage?.toString() || '97');
             setCurrentDates({ start: campaign.start_date, end: campaign.end_date });
             // Initialize local related campaigns from props if available, else empty (to be fetched)
             setLocalRelatedCampaigns(relatedCampaigns || []);
@@ -111,9 +113,16 @@ export default function ObservationsModal({
         setIsSaving(true);
         try {
             const numericBudget = parseFloat(budget.toString().replace(',', '.'));
+            const numericMeta = parseFloat(metaPercentage.toString().replace(',', '.'));
 
             if (isNaN(numericBudget) || numericBudget < 0) {
                 toast.error('O valor do investimento deve ser um número válido e positivo');
+                setIsSaving(false);
+                return;
+            }
+
+            if (isNaN(numericMeta) || numericMeta < 0 || numericMeta > 100) {
+                toast.error('A meta deve ser um número válido entre 0 e 100');
                 setIsSaving(false);
                 return;
             }
@@ -147,7 +156,8 @@ export default function ObservationsModal({
             await onSave({
                 observations,
                 campaign_type: campaignName,
-                budget: numericBudget
+                budget: numericBudget,
+                meta_percentage: numericMeta
             });
             toast.success('Alterações salvas com sucesso!');
             onClose();
@@ -219,7 +229,7 @@ export default function ObservationsModal({
 
                     <div className="space-y-6">
                         {/* Wrapper for fields */}
-                        <div className="grid grid-cols-2 gap-5">
+                        <div className="grid grid-cols-3 gap-5">
                             <div className="space-y-2">
                                 <Label htmlFor="campaign-name" className="text-xs font-semibold uppercase tracking-wider text-text-muted-light ml-1">Nome da Campanha</Label>
                                 <Input
@@ -243,6 +253,22 @@ export default function ObservationsModal({
                                     min="0"
                                     className="h-12 rounded-xl border-border-light bg-bg-light focus:ring-accent-primary font-bold text-text-primary-light text-base"
                                     onFocus={(e) => (budget === '0' || budget === '0.00') && setBudget('')}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="meta-percentage" className="text-xs font-semibold uppercase tracking-wider text-text-muted-light ml-1">Meta (%)</Label>
+                                <Input
+                                    id="meta-percentage"
+                                    type="number"
+                                    inputMode="decimal"
+                                    value={metaPercentage}
+                                    onChange={(e) => setMetaPercentage(e.target.value)}
+                                    placeholder="97"
+                                    step="0.1"
+                                    min="0"
+                                    max="100"
+                                    className="h-12 rounded-xl border-border-light bg-bg-light focus:ring-accent-primary font-bold text-text-primary-light text-base"
+                                    onFocus={(e) => (metaPercentage === '0' || metaPercentage === '0.00') && setMetaPercentage('')}
                                 />
                             </div>
                         </div>
@@ -590,8 +616,20 @@ export default function ObservationsModal({
                         <div className="pt-1">
                             <p className="text-sm font-bold text-text-primary-light flex items-center gap-2">
                                 <span className="text-text-muted-light font-normal">Período:</span>{' '}
-                                {new Date(campaign.start_date).toLocaleDateString('pt-BR')} até{' '}
-                                {new Date(campaign.end_date).toLocaleDateString('pt-BR')}
+                                {(() => {
+                                    const formatDate = (dateString: string) => {
+                                        if (!dateString) return '';
+                                        const [year, month, day] = dateString.split('-').map(Number);
+                                        const date = new Date(year, month - 1, day);
+                                        return date.toLocaleDateString('pt-BR');
+                                    };
+                                    return (
+                                        <>
+                                            {formatDate(campaign.start_date)} até{' '}
+                                            {formatDate(campaign.end_date)}
+                                        </>
+                                    );
+                                })()}
                             </p>
                         </div>
                     </div>

@@ -630,18 +630,15 @@ export default function StitchDashboard({
                                                     <th className="w-8 pb-4 pl-6"></th>
                                                     <th className="pb-4 pl-2 text-xs font-semibold text-text-muted-light uppercase tracking-wider min-w-[220px] align-bottom">Canal / Campanha</th>
                                                     <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider min-w-[120px] text-blue-500 align-bottom">Plano de Mídia</th>
-                                                    <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider min-w-[130px] align-bottom">Período</th>
                                                     <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider min-w-[120px] align-bottom"> % Tempo </th>
-                                                    <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider text-center align-bottom">Meta</th>
-                                                    <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider text-text-primary-light min-w-[140px] align-bottom">Investimento <br />Utilizado</th>
-                                                    <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider min-w-[80px] align-bottom">Última <br />Edição</th>
                                                     <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider min-w-[120px] align-bottom">Parciais</th>
+                                                    <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider text-text-primary-light min-w-[140px] align-bottom">Investimento <br />Utilizado</th>
                                                     <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider text-center align-bottom">% Meta</th>
                                                     <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider min-w-[120px] align-bottom">Investimento <br />/ Dia</th>
                                                     <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider text-center align-bottom">% Gasto <br />Real</th>
                                                     <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider text-center align-bottom">Status</th>
-
-
+                                                    <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider min-w-[130px] align-bottom">Período</th>
+                                                    <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider min-w-[140px] align-bottom">Última <br />Edição</th>
                                                     <th className="pb-4 pr-6 text-xs font-semibold text-text-muted-light uppercase tracking-wider text-right align-bottom">Ações</th>
                                                 </tr>
                                             </thead>
@@ -730,21 +727,6 @@ export default function StitchDashboard({
                                                                             </td>
 
                                                                             <td className="py-4 px-3 align-middle">
-                                                                                <span className="text-xs text-text-muted-light whitespace-nowrap">
-                                                                                    {(() => {
-                                                                                        const formatDate = (dateStr: string) => {
-                                                                                            if (!dateStr) return '-';
-                                                                                            const [y, m, d] = dateStr.split('T')[0].split('-').map(Number);
-                                                                                            const localDate = new Date(y, m - 1, d);
-                                                                                            return localDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })
-                                                                                                .replace(' de ', ' ').replace('.', '');
-                                                                                        };
-                                                                                        return `${formatDate(campaign.start_date)} - ${formatDate(campaign.end_date)}`;
-                                                                                    })()}
-                                                                                </span>
-                                                                            </td>
-
-                                                                            <td className="py-4 px-3 align-middle">
                                                                                 <div className="flex items-center gap-2">
                                                                                     <div className="w-full bg-element-light rounded-full h-1.5">
                                                                                         <div className="bg-text-primary-light h-1.5 rounded-full" style={{ width: `${Math.min(calculation.percentTime, 100)}%` }}></div>
@@ -753,31 +735,11 @@ export default function StitchDashboard({
                                                                                 </div>
                                                                             </td>
 
-                                                                            <td className="py-4 px-3 align-middle text-center">
-                                                                                {editingCell === `${campaign.id}|meta_percentage` ? (
-                                                                                    <input
-                                                                                        type="number"
-                                                                                        autoFocus
-                                                                                        className="w-16 text-center border border-border-light rounded px-1 py-0.5 text-sm bg-card-light text-text-primary-light focus:ring-1 focus:ring-accent-primary outline-none"
-                                                                                        value={editValue}
-                                                                                        onChange={(e) => setEditValue(e.target.value)}
-                                                                                        onBlur={() => handleImmediateSave(campaign.id, 'meta_percentage', editValue)}
-                                                                                        onKeyDown={(e) => {
-                                                                                            if (e.key === 'Enter') handleImmediateSave(campaign.id, 'meta_percentage', editValue);
-                                                                                            else if (e.key === 'Escape') setEditingCell(null);
-                                                                                        }}
-                                                                                    />
-                                                                                ) : (
-                                                                                    <div
-                                                                                        onClick={() => {
-                                                                                            setEditingCell(`${campaign.id}|meta_percentage`);
-                                                                                            setEditValue(campaign.meta_percentage);
-                                                                                        }}
-                                                                                        className="cursor-pointer hover:bg-card-hover-light px-2 py-1 rounded inline-block transition-colors"
-                                                                                    >
-                                                                                        <span className="text-sm font-medium text-text-primary-light">{campaign.meta_percentage}%</span>
-                                                                                    </div>
-                                                                                )}
+                                                                            <td className="py-4 px-3 align-middle whitespace-nowrap">
+                                                                                <div className="flex flex-col text-xs font-medium gap-0.5">
+                                                                                    <span className="text-green-600"><span className="opacity-70">{campaign.meta_percentage}%:</span> {formatCurrency(calculation.parcial97)}</span>
+                                                                                    <span className="text-blue-500"><span className="opacity-70">100%:</span> {formatCurrency(calculation.parcial100)}</span>
+                                                                                </div>
                                                                             </td>
 
                                                                             <td className="py-4 px-3 align-middle whitespace-nowrap">
@@ -807,35 +769,6 @@ export default function StitchDashboard({
                                                                                 )}
                                                                             </td>
 
-                                                                            <td className="py-4 px-3 align-middle whitespace-nowrap">
-                                                                                {(() => {
-                                                                                    // @ts-ignore
-                                                                                    const { last_editor_name, last_budget_updated_at } = campaign;
-                                                                                    if (!last_budget_updated_at) {
-                                                                                        return <span className="text-[10px] text-gray-500">-</span>;
-                                                                                    }
-                                                                                    const dateObj = new Date(last_budget_updated_at);
-                                                                                    const dateStr = dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-                                                                                    const timeStr = dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-
-                                                                                    return (
-                                                                                        <div className="flex flex-col text-[10px] leading-tight text-text-muted-light">
-                                                                                            <span className="font-semibold text-text-primary-light truncate max-w-[80px]" title={last_editor_name || 'Desconhecido'}>
-                                                                                                {last_editor_name || 'Desconhecido'}
-                                                                                            </span>
-                                                                                            <span>{dateStr} {timeStr}</span>
-                                                                                        </div>
-                                                                                    );
-                                                                                })()}
-                                                                            </td>
-
-                                                                            <td className="py-4 px-3 align-middle whitespace-nowrap">
-                                                                                <div className="flex flex-col text-xs font-medium gap-0.5">
-                                                                                    <span className="text-green-600"><span className="opacity-70">{campaign.meta_percentage}%:</span> {formatCurrency(calculation.parcial97)}</span>
-                                                                                    <span className="text-blue-500"><span className="opacity-70">100%:</span> {formatCurrency(calculation.parcial100)}</span>
-                                                                                </div>
-                                                                            </td>
-
                                                                             <td className="py-4 px-3 align-middle text-center">
                                                                                 <span className="text-sm font-medium text-text-primary-light">{percentMeta.toFixed(1)}%</span>
                                                                             </td>
@@ -860,9 +793,42 @@ export default function StitchDashboard({
                                                                                 </span>
                                                                             </td>
 
+                                                                            <td className="py-4 px-3 align-middle">
+                                                                                <span className="text-xs text-text-muted-light whitespace-nowrap">
+                                                                                    {(() => {
+                                                                                        const formatDate = (dateStr: string) => {
+                                                                                            if (!dateStr) return '-';
+                                                                                            const [y, m, d] = dateStr.split('T')[0].split('-').map(Number);
+                                                                                            const localDate = new Date(y, m - 1, d);
+                                                                                            return localDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })
+                                                                                                .replace(' de ', ' ').replace('.', '');
+                                                                                        };
+                                                                                        return `${formatDate(campaign.start_date)} - ${formatDate(campaign.end_date)}`;
+                                                                                    })()}
+                                                                                </span>
+                                                                            </td>
 
+                                                                            <td className="py-4 px-3 align-middle whitespace-nowrap">
+                                                                                {(() => {
+                                                                                    // @ts-ignore
+                                                                                    const { last_editor_name, last_budget_updated_at } = campaign;
+                                                                                    if (!last_budget_updated_at) {
+                                                                                        return <span className="text-xs text-gray-500">-</span>;
+                                                                                    }
+                                                                                    const dateObj = new Date(last_budget_updated_at);
+                                                                                    const dateStr = dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                                                                                    const timeStr = dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
-
+                                                                                    return (
+                                                                                        <div className="flex flex-col text-xs leading-tight text-text-muted-light">
+                                                                                            <span className="font-semibold text-text-primary-light truncate max-w-[140px]" title={last_editor_name || 'Desconhecido'}>
+                                                                                                {last_editor_name || 'Desconhecido'}
+                                                                                            </span>
+                                                                                            <span>{dateStr} {timeStr}</span>
+                                                                                        </div>
+                                                                                    );
+                                                                                })()}
+                                                                            </td>
 
                                                                             <td className="py-4 pr-6 align-middle text-right rounded-r-xl">
                                                                                 <div className="flex items-center justify-end gap-2">
@@ -904,13 +870,11 @@ export default function StitchDashboard({
                                                     <td className="py-4 pl-2 uppercase tracking-wider">TOTAL</td>
                                                     <td className="py-4 px-3">{formatCurrency(footerTotals.budget)}</td>
                                                     <td className="py-4 px-3"></td>
-                                                    <td className="py-4 px-3"></td>
-                                                    <td className="py-4 px-3"></td>
-                                                    <td className="py-4 px-3">{formatCurrency(footerTotals.currentSpend)}</td>
                                                     <td className="py-4 px-3">
                                                         <span>{formatCurrency(footerTotals.parcial100)}</span>
                                                     </td>
-                                                    <td className="py-4 px-3">
+                                                    <td className="py-4 px-3 font-semibold text-text-primary-light">{formatCurrency(footerTotals.currentSpend)}</td>
+                                                    <td className="py-4 px-3 text-center">
                                                         {footerTotals.parcial100 > 0
                                                             ? ((footerTotals.currentSpend / footerTotals.parcial100) * 100).toFixed(1) + '%'
                                                             : '0.0%'}
@@ -921,10 +885,6 @@ export default function StitchDashboard({
                                                     <td className="py-4 px-3 text-center">
                                                         {(() => {
                                                             const totalPercent = footerTotals.budget > 0 ? (footerTotals.currentSpend / footerTotals.budget) * 100 : 0;
-                                                            // Calculate global percent time based on the first campaign or default to 0 if list empty
-                                                            // We assume all campaigns in view largely share the same 'month progress' context.
-                                                            // Creating a dummy calc to get percentTime
-                                                            const referenceCampaign = filteredCampaigns[0];
                                                             // Always gray style as requested
                                                             let badgeColor = 'bg-element-light text-text-primary-light border border-border-light px-2 py-0.5 rounded-full';
 
@@ -935,6 +895,8 @@ export default function StitchDashboard({
                                                             );
                                                         })()}
                                                     </td>
+                                                    <td className="py-4 px-3"></td>
+                                                    <td className="py-4 px-3"></td>
                                                     <td className="py-4 px-3"></td>
                                                     <td className="py-4 pr-6 rounded-br-xl"></td>
                                                 </tr>
