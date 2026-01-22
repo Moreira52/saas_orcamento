@@ -627,6 +627,18 @@ export default function ProfilePage() {
                     )}
                 </Tabs>
             </main>
+
+            <footer className="py-6 text-center text-xs text-gray-400">
+                <div className="flex justify-center gap-4">
+                    <a href="/privacy" target="_blank" className="hover:text-gray-600 transition-colors">
+                        Política de Privacidade
+                    </a>
+                    <span>•</span>
+                    <a href="/terms" target="_blank" className="hover:text-gray-600 transition-colors">
+                        Termos de Serviço
+                    </a>
+                </div>
+            </footer>
             <Toaster />
 
             <ImageCropper
