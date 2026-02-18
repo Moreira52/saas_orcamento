@@ -60,21 +60,49 @@ export async function DELETE(
 ) {
     try {
         const { id } = await params;
-        // VALIDAÇÃO: Verificar se cliente tem campanhas ativas
-        const { count } = await supabase
+        // REMOVED CHECK: The user wants to force delete, so we clean up dependencies first.
+
+        // 1. Get campaign IDs to clean up logs
+        const { data: campaigns } = await supabase
             .from('campaigns')
-            .select('id', { count: 'exact', head: true }) // Contar sem buscar dados (rápido)
+            .select('id')
             .eq('client_id', id);
 
-        // Se tem campanhas, BLOQUEAR exclusão
-        if (count && count > 0) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    error: `Cliente possui ${count} campanha(s). Exclua as campanhas primeiro.`,
-                },
-                { status: 400 } // Bad Request
-            );
+        const campaignIds = campaigns?.map(c => c.id) || [];
+
+        // 2. Delete budget logs for these campaigns
+        if (campaignIds.length > 0) {
+            const { error: logsError } = await supabase
+                .from('campaign_budget_logs')
+                .delete()
+                .in('campaign_id', campaignIds);
+
+            if (logsError) {
+                console.error('Error deleting campaign logs:', logsError);
+                return NextResponse.json(handleSupabaseError(logsError), { status: 500 });
+            }
+        }
+
+        // 3. Delete campaigns
+        const { error: deleteCampaignsError } = await supabase
+            .from('campaigns')
+            .delete()
+            .eq('client_id', id);
+
+        if (deleteCampaignsError) {
+            console.error('Error deleting campaigns:', deleteCampaignsError);
+            return NextResponse.json(handleSupabaseError(deleteCampaignsError), { status: 500 });
+        }
+
+        // 4. Delete integrations
+        const { error: integrationsError } = await supabase
+            .from('integrations')
+            .delete()
+            .eq('client_id', id);
+
+        if (integrationsError) {
+            console.error('Error deleting integrations:', integrationsError);
+            return NextResponse.json(handleSupabaseError(integrationsError), { status: 500 });
         }
 
         // SOFT DELETE: não deletar fisicamente, apenas marcar data de exclusão

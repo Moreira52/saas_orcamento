@@ -27,12 +27,13 @@ import {
 } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { CalendarIcon, AlertCircle } from 'lucide-react';
 import { format, differenceInMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import GoogleCampaignSelectorModal from './google-campaign-selector-modal';
 
 const campaignSchema = z.object({
     channel: z.enum(['meta_ads', 'google_ads', 'linkedin_ads', 'tiktok_ads', 'pinterest_ads', 'other']),
@@ -65,6 +66,7 @@ export default function NewCampaignModal({ open, onClose, clientId }: NewCampaig
         reset,
         control,
         watch,
+        setValue,
     } = useForm<CampaignFormData>({
         resolver: zodResolver(campaignSchema),
         defaultValues: {
@@ -74,6 +76,37 @@ export default function NewCampaignModal({ open, onClose, clientId }: NewCampaig
 
     const startDate = watch('start_date');
     const endDate = watch('end_date');
+    const selectedChannel = watch('channel');
+
+    // Google Ads Integration Status
+    const [showGoogleSelector, setShowGoogleSelector] = useState(false);
+
+    // Check Google Integration Status
+    const { data: googleStatus } = useQuery({
+        queryKey: ['integration-status', 'google', clientId],
+        queryFn: async () => {
+            const res = await fetch(`/api/integrations/status?clientId=${clientId}&provider=google`);
+            if (!res.ok) return null;
+            return res.json();
+        },
+        enabled: open
+    });
+
+    const isGoogleConnected = googleStatus?.connected && googleStatus?.integrationId;
+
+    const handleGoogleCampaignSelect = (campaign: any) => {
+        setValue('campaign_type', campaign.name);
+
+        // Salvar ID de forma estruturada nas observações para uso futuro
+        const currentObs = watch('observations') || '';
+        const idTag = `[GOOGLE_ID:${campaign.id}]`;
+
+        // Remover tag antiga se existir para substituir
+        const cleanObs = currentObs.replace(/\[GOOGLE_ID:\d+\]\s*/g, '');
+
+        setValue('observations', `${idTag} ${cleanObs}`.trim());
+        toast.success(`Campanha "${campaign.name}" vinculada!`);
+    };
 
     // Detectar se campanha cruza meses
     useEffect(() => {
@@ -165,248 +198,273 @@ export default function NewCampaignModal({ open, onClose, clientId }: NewCampaig
     ];
 
     return (
-        <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle>Nova Campanha</DialogTitle>
-                    <DialogDescription>
-                        Adicione uma nova campanha de tráfego pago
-                    </DialogDescription>
-                </DialogHeader>
+        <>
+            <Dialog open={open} onOpenChange={onClose}>
+                <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Nova Campanha</DialogTitle>
+                        <DialogDescription>
+                            Adicione uma nova campanha de tráfego pago
+                        </DialogDescription>
+                    </DialogHeader>
 
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                    {/* Canal */}
-                    <div>
-                        <Label htmlFor="channel">Canal *</Label>
-                        <Controller
-                            name="channel"
-                            control={control}
-                            render={({ field }) => (
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                    <SelectTrigger className={errors.channel ? 'border-red-500' : ''}>
-                                        <SelectValue placeholder="Selecione o canal" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {channelOptions.map((option) => (
-                                            <SelectItem key={option.value} value={option.value}>
-                                                <div className="flex items-center gap-2">
-                                                    {option.iconSrc ? (
-                                                        <div className="relative w-4 h-4">
-                                                            <Image
-                                                                src={option.iconSrc}
-                                                                alt={option.label}
-                                                                fill
-                                                                className="object-contain"
-                                                            />
-                                                        </div>
-                                                    ) : (
-                                                        <span className="w-4 h-4 flex items-center justify-center text-sm">
-                                                            {option.iconEmoji}
-                                                        </span>
+                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                        {/* Canal */}
+                        <div>
+                            <Label htmlFor="channel">Canal *</Label>
+                            <Controller
+                                name="channel"
+                                control={control}
+                                render={({ field }) => (
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <SelectTrigger className={errors.channel ? 'border-red-500' : ''}>
+                                            <SelectValue placeholder="Selecione o canal" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {channelOptions.map((option) => (
+                                                <SelectItem key={option.value} value={option.value}>
+                                                    <div className="flex items-center gap-2">
+                                                        {option.iconSrc ? (
+                                                            <div className="relative w-4 h-4">
+                                                                <Image
+                                                                    src={option.iconSrc}
+                                                                    alt={option.label}
+                                                                    fill
+                                                                    className="object-contain"
+                                                                />
+                                                            </div>
+                                                        ) : (
+                                                            <span className="w-4 h-4 flex items-center justify-center text-sm">
+                                                                {option.iconEmoji}
+                                                            </span>
+                                                        )}
+                                                        <span>{option.label}</span>
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                )}
+                            />
+                            {errors.channel && (
+                                <p className="text-sm text-red-600 mt-1">{errors.channel.message}</p>
+                            )}
+                        </div>
+
+                        {/* Tipo de Campanha */}
+                        <div>
+                            <div className="flex justify-between items-center mb-1">
+                                <Label htmlFor="campaign_type">Nome da Campanha *</Label>
+                                {selectedChannel === 'google_ads' && isGoogleConnected && (
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setShowGoogleSelector(true)}
+                                        className="text-xs h-6 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                    >
+                                        Importar do Google Ads
+                                    </Button>
+                                )}
+                            </div>
+                            <Input
+                                id="campaign_type"
+                                placeholder="Ex: Conversão, Awareness, Remarketing"
+                                {...register('campaign_type')}
+                                className={errors.campaign_type ? 'border-red-500' : ''}
+                            />
+                            {errors.campaign_type && (
+                                <p className="text-sm text-red-600 mt-1">{errors.campaign_type.message}</p>
+                            )}
+                        </div>
+
+                        {/* Orçamento */}
+                        <div>
+                            <Label htmlFor="budget">Plano de Mídia (R$) *</Label>
+                            <Input
+                                id="budget"
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                placeholder="10000.00"
+                                {...register('budget', { valueAsNumber: true })}
+                                className={errors.budget ? 'border-red-500' : ''}
+                            />
+                            {errors.budget && (
+                                <p className="text-sm text-red-600 mt-1">{errors.budget.message}</p>
+                            )}
+                        </div>
+
+                        {/* Meta % */}
+                        <div>
+                            <Label htmlFor="meta_percentage">Meta (%) *</Label>
+                            <Input
+                                id="meta_percentage"
+                                type="number"
+                                step="0.1"
+                                min="0"
+                                max="100"
+                                placeholder="97"
+                                {...register('meta_percentage', { valueAsNumber: true })}
+                                className={errors.meta_percentage ? 'border-red-500' : ''}
+                            />
+                            {errors.meta_percentage && (
+                                <p className="text-sm text-red-600 mt-1">{errors.meta_percentage.message}</p>
+                            )}
+                            <p className="text-xs text-gray-500 mt-1">
+                                Meta padrão: 97% do orçamento total
+                            </p>
+                        </div>
+
+                        {/* Período (Date Range) */}
+                        <div className="grid grid-cols-2 gap-4">
+                            {/* Data Inicial */}
+                            <div>
+                                <Label>Data Inicial *</Label>
+                                <Controller
+                                    name="start_date"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    className={cn(
+                                                        'w-full justify-start text-left font-normal',
+                                                        !field.value && 'text-muted-foreground',
+                                                        errors.start_date && 'border-red-500'
                                                     )}
-                                                    <span>{option.label}</span>
-                                                </div>
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            )}
-                        />
-                        {errors.channel && (
-                            <p className="text-sm text-red-600 mt-1">{errors.channel.message}</p>
-                        )}
-                    </div>
-
-                    {/* Tipo de Campanha */}
-                    <div>
-                        <Label htmlFor="campaign_type">Tipo de Campanha *</Label>
-                        <Input
-                            id="campaign_type"
-                            placeholder="Ex: Conversão, Awareness, Remarketing"
-                            {...register('campaign_type')}
-                            className={errors.campaign_type ? 'border-red-500' : ''}
-                        />
-                        {errors.campaign_type && (
-                            <p className="text-sm text-red-600 mt-1">{errors.campaign_type.message}</p>
-                        )}
-                    </div>
-
-                    {/* Orçamento */}
-                    <div>
-                        <Label htmlFor="budget">Plano de Mídia (R$) *</Label>
-                        <Input
-                            id="budget"
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            placeholder="10000.00"
-                            {...register('budget', { valueAsNumber: true })}
-                            className={errors.budget ? 'border-red-500' : ''}
-                        />
-                        {errors.budget && (
-                            <p className="text-sm text-red-600 mt-1">{errors.budget.message}</p>
-                        )}
-                    </div>
-
-                    {/* Meta % */}
-                    <div>
-                        <Label htmlFor="meta_percentage">Meta (%) *</Label>
-                        <Input
-                            id="meta_percentage"
-                            type="number"
-                            step="0.1"
-                            min="0"
-                            max="100"
-                            placeholder="97"
-                            {...register('meta_percentage', { valueAsNumber: true })}
-                            className={errors.meta_percentage ? 'border-red-500' : ''}
-                        />
-                        {errors.meta_percentage && (
-                            <p className="text-sm text-red-600 mt-1">{errors.meta_percentage.message}</p>
-                        )}
-                        <p className="text-xs text-gray-500 mt-1">
-                            Meta padrão: 97% do orçamento total
-                        </p>
-                    </div>
-
-                    {/* Período (Date Range) */}
-                    <div className="grid grid-cols-2 gap-4">
-                        {/* Data Inicial */}
-                        <div>
-                            <Label>Data Inicial *</Label>
-                            <Controller
-                                name="start_date"
-                                control={control}
-                                render={({ field }) => (
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                variant="outline"
-                                                className={cn(
-                                                    'w-full justify-start text-left font-normal',
-                                                    !field.value && 'text-muted-foreground',
-                                                    errors.start_date && 'border-red-500'
-                                                )}
-                                            >
-                                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                                {field.value ? (
-                                                    format(field.value, 'dd/MM/yyyy', { locale: ptBR })
-                                                ) : (
-                                                    'Selecione'
-                                                )}
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0" align="start">
-                                            <Calendar
-                                                mode="single"
-                                                selected={field.value}
-                                                onSelect={field.onChange}
-                                                locale={ptBR}
-                                                initialFocus
-                                            />
-                                        </PopoverContent>
-                                    </Popover>
+                                                >
+                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                    {field.value ? (
+                                                        format(field.value, 'dd/MM/yyyy', { locale: ptBR })
+                                                    ) : (
+                                                        'Selecione'
+                                                    )}
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0" align="start">
+                                                <Calendar
+                                                    mode="single"
+                                                    selected={field.value}
+                                                    onSelect={field.onChange}
+                                                    locale={ptBR}
+                                                    initialFocus
+                                                />
+                                            </PopoverContent>
+                                        </Popover>
+                                    )}
+                                />
+                                {errors.start_date && (
+                                    <p className="text-sm text-red-600 mt-1">{errors.start_date.message}</p>
                                 )}
-                            />
-                            {errors.start_date && (
-                                <p className="text-sm text-red-600 mt-1">{errors.start_date.message}</p>
-                            )}
-                        </div>
+                            </div>
 
-                        {/* Data Final */}
-                        <div>
-                            <Label>Data Final *</Label>
-                            <Controller
-                                name="end_date"
-                                control={control}
-                                render={({ field }) => (
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                variant="outline"
-                                                className={cn(
-                                                    'w-full justify-start text-left font-normal',
-                                                    !field.value && 'text-muted-foreground',
-                                                    errors.end_date && 'border-red-500'
-                                                )}
-                                            >
-                                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                                {field.value ? (
-                                                    format(field.value, 'dd/MM/yyyy', { locale: ptBR })
-                                                ) : (
-                                                    'Selecione'
-                                                )}
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0" align="start">
-                                            <Calendar
-                                                mode="single"
-                                                selected={field.value}
-                                                onSelect={field.onChange}
-                                                locale={ptBR}
-                                                initialFocus
-                                            />
-                                        </PopoverContent>
-                                    </Popover>
+                            {/* Data Final */}
+                            <div>
+                                <Label>Data Final *</Label>
+                                <Controller
+                                    name="end_date"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    className={cn(
+                                                        'w-full justify-start text-left font-normal',
+                                                        !field.value && 'text-muted-foreground',
+                                                        errors.end_date && 'border-red-500'
+                                                    )}
+                                                >
+                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                    {field.value ? (
+                                                        format(field.value, 'dd/MM/yyyy', { locale: ptBR })
+                                                    ) : (
+                                                        'Selecione'
+                                                    )}
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0" align="start">
+                                                <Calendar
+                                                    mode="single"
+                                                    selected={field.value}
+                                                    onSelect={field.onChange}
+                                                    locale={ptBR}
+                                                    initialFocus
+                                                />
+                                            </PopoverContent>
+                                        </Popover>
+                                    )}
+                                />
+                                {errors.end_date && (
+                                    <p className="text-sm text-red-600 mt-1">{errors.end_date.message}</p>
                                 )}
-                            />
-                            {errors.end_date && (
-                                <p className="text-sm text-red-600 mt-1">{errors.end_date.message}</p>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Alerta de Campanha Multi-Mês */}
-                    {isMultiMonth && (
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
-                            <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                            <div className="text-sm">
-                                <p className="font-medium text-blue-900">Campanha Multi-Mês Detectada</p>
-                                <p className="text-blue-700 mt-1">
-                                    Esta campanha cruza {monthsCount} {monthsCount === 2 ? 'mês' : 'meses'}.
-                                    O orçamento será dividido automaticamente de forma proporcional aos dias de cada mês.
-                                </p>
                             </div>
                         </div>
-                    )}
 
-                    {/* Observações */}
-                    <div>
-                        <Label htmlFor="observations">Observações (opcional)</Label>
-                        <Textarea
-                            id="observations"
-                            placeholder="Anotações sobre esta campanha..."
-                            rows={3}
-                            maxLength={500}
-                            {...register('observations')}
-                            className={errors.observations ? 'border-red-500' : ''}
-                        />
-                        {errors.observations && (
-                            <p className="text-sm text-red-600 mt-1">{errors.observations.message}</p>
+                        {/* Alerta de Campanha Multi-Mês */}
+                        {isMultiMonth && (
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
+                                <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                                <div className="text-sm">
+                                    <p className="font-medium text-blue-900">Campanha Multi-Mês Detectada</p>
+                                    <p className="text-blue-700 mt-1">
+                                        Esta campanha cruza {monthsCount} {monthsCount === 2 ? 'mês' : 'meses'}.
+                                        O orçamento será dividido automaticamente de forma proporcional aos dias de cada mês.
+                                    </p>
+                                </div>
+                            </div>
                         )}
-                        <p className="text-xs text-gray-500 mt-1">
-                            Máximo 500 caracteres
-                        </p>
-                    </div>
 
-                    <DialogFooter>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => {
-                                reset();
-                                onClose();
-                            }}
-                            disabled={isSubmitting}
-                        >
-                            Cancelar
-                        </Button>
-                        <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting ? 'Criando...' : 'Criar Campanha'}
-                        </Button>
-                    </DialogFooter>
-                </form>
-            </DialogContent>
-        </Dialog>
+                        {/* Observações */}
+                        <div>
+                            <Label htmlFor="observations">Observações (opcional)</Label>
+                            <Textarea
+                                id="observations"
+                                placeholder="Anotações sobre esta campanha..."
+                                rows={3}
+                                maxLength={500}
+                                {...register('observations')}
+                                className={errors.observations ? 'border-red-500' : ''}
+                            />
+                            {errors.observations && (
+                                <p className="text-sm text-red-600 mt-1">{errors.observations.message}</p>
+                            )}
+                            <p className="text-xs text-gray-500 mt-1">
+                                Máximo 500 caracteres
+                            </p>
+                        </div>
+
+                        <DialogFooter>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => {
+                                    reset();
+                                    onClose();
+                                }}
+                                disabled={isSubmitting}
+                            >
+                                Cancelar
+                            </Button>
+                            <Button type="submit" disabled={isSubmitting}>
+                                {isSubmitting ? 'Criando...' : 'Criar Campanha'}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Google Campaign Selector Modal */}
+            {showGoogleSelector && isGoogleConnected && (
+                <GoogleCampaignSelectorModal
+                    open={showGoogleSelector}
+                    onClose={() => setShowGoogleSelector(false)}
+                    integrationId={googleStatus.integrationId}
+                    onSelect={handleGoogleCampaignSelect}
+                />
+            )}
+        </>
     );
 }

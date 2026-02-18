@@ -63,4 +63,5 @@ export interface Campaign {
     last_budget_updated_at?: string | null;
     last_budget_updated_by?: string | null;
     last_editor_name?: string; // Virtual field from join
+    last_update_type?: 'manual' | 'api' | null;
 }

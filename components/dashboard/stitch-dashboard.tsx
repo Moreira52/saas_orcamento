@@ -37,6 +37,8 @@ import { formatCurrency, formatPercentage } from '@/lib/utils';
 import { Campaign, Client } from '@/types/database';
 import { useState, useEffect } from 'react';
 import ObservationsModal from '@/components/modals/observations-modal';
+import GoogleCampaignSelectorModal from '@/components/modals/google-campaign-selector-modal';
+import { useQuery } from '@tanstack/react-query';
 import { useCampaignCalculations } from '@/lib/hooks/use-campaign-calculations';
 import { formatCurrency as formatCurrencyUtil } from '@/lib/utils'; // Renamed to avoid conflict with lucide-react import
 import IntegrationsButton from './integrations-button';
@@ -88,6 +90,7 @@ interface StitchDashboardProps {
         avatar_url?: string | null;
     } | null;
     onConnectGoogle: (clientId: string) => void;
+    onSyncGoogle: (clientId: string) => void;
 }
 
 export default function StitchDashboard({
@@ -112,10 +115,73 @@ export default function StitchDashboard({
     onSelectAnalyst,
     onLogout,
     currentUser,
-    onConnectGoogle
+    onConnectGoogle,
+    onSyncGoogle
 }: StitchDashboardProps) {
     const { setTheme, theme } = useTheme();
     const activeClient = clients.find(c => c.id === activeClientId);
+
+    // Google Integration Status (Reused logic)
+    const { data: googleIntegrationStatus } = useQuery({
+        queryKey: ['integration-status', 'google', activeClientId],
+        queryFn: async () => {
+            if (!activeClientId) return null;
+            const res = await fetch(`/api/integrations/status?clientId=${activeClientId}&provider=google`);
+            if (!res.ok) return null;
+            return res.json();
+        },
+        enabled: !!activeClientId,
+        staleTime: 10000 // Cache for 10s
+    });
+
+    const isGoogleConnected = googleIntegrationStatus?.connected && googleIntegrationStatus?.integrationId;
+
+    // Linking Google Campaign State
+    // Linking Google Campaign State
+    const [showGoogleLinkModal, setShowGoogleLinkModal] = useState(false);
+    const [campaignToLink, setCampaignToLink] = useState<Campaign | null>(null);
+
+    // Define FilterRule interface locally to match the modal's expected type
+    interface FilterRule {
+        id: string;
+        field: 'name' | 'id' | 'status';
+        operator: 'contains' | 'equals' | 'not_contains' | 'starts_with';
+        value: string;
+    }
+
+    const handleLinkGoogleCampaign = async (googleCampaigns: { id: number; name: string }[], rules?: FilterRule[]) => {
+        if (!campaignToLink) return;
+
+        let currentObs = campaignToLink.observations || '';
+
+        // Remove ALL old tags (both ID and RULE)
+        currentObs = currentObs.replace(/\[GOOGLE_ID:\d+\]\s*/g, ' ').replace(/\[GOOGLE_RULE:[^\]]+\]\s*/g, ' ').trim();
+
+        // Clean up double spaces
+        currentObs = currentObs.replace(/\s+/g, ' ');
+
+        let newTags = '';
+
+        if (rules && rules.length > 0) {
+            // Encode rules to Base64 to avoid parsing issues with special characters in JSON
+            const ruleData = { rules };
+            const base64Rules = btoa(JSON.stringify(ruleData));
+            newTags = `[GOOGLE_RULE:${base64Rules}]`;
+        } else {
+            newTags = googleCampaigns.map(c => `[GOOGLE_ID:${c.id}]`).join(' ');
+        }
+
+        const newObs = `${newTags} ${currentObs}`.trim();
+
+        await onUpdateCampaign(campaignToLink.id, {
+            observations: newObs
+        });
+
+        // Automatically sync spend to reflect new campaigns immediately
+        if (activeClientId) {
+            onSyncGoogle(activeClientId);
+        }
+    };
 
     // Editing State
     const [editingCell, setEditingCell] = useState<string | null>(null);
@@ -147,7 +213,13 @@ export default function StitchDashboard({
                 if (isNaN(numValue) || numValue < 0) return;
                 finalValue = numValue;
             }
-            await onUpdateCampaign(id, { [field]: finalValue });
+
+            const updateData: any = { [field]: finalValue };
+            if (field === 'current_spend') {
+                updateData.last_update_type = 'manual';
+            }
+
+            await onUpdateCampaign(id, updateData);
         } catch (error) {
             console.error('Error saving:', error);
         }
@@ -471,6 +543,7 @@ export default function StitchDashboard({
                                             <IntegrationsButton
                                                 clientId={activeClient.id}
                                                 onConnectGoogle={() => onConnectGoogle(activeClient.id)}
+                                                onSyncGoogle={() => onSyncGoogle(activeClient.id)}
                                             />
 
                                             <button
@@ -822,18 +895,25 @@ export default function StitchDashboard({
                                                                             <td className="py-4 px-3 align-middle whitespace-nowrap">
                                                                                 {(() => {
                                                                                     // @ts-ignore
-                                                                                    const { last_editor_name, last_budget_updated_at } = campaign;
+                                                                                    const { last_editor_name, last_budget_updated_at, last_update_type } = campaign;
+
                                                                                     if (!last_budget_updated_at) {
                                                                                         return <span className="text-xs text-gray-500">-</span>;
                                                                                     }
+
                                                                                     const dateObj = new Date(last_budget_updated_at);
                                                                                     const dateStr = dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
                                                                                     const timeStr = dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
+                                                                                    const isAuto = last_update_type === 'api';
+                                                                                    const editorName = isAuto ? 'Edição automática' : (last_editor_name || 'Desconhecido');
+
+                                                                                    const nameClass = isAuto ? 'text-blue-500 font-bold' : 'font-semibold text-text-primary-light';
+
                                                                                     return (
                                                                                         <div className="flex flex-col text-xs leading-tight text-text-muted-light">
-                                                                                            <span className="font-semibold text-text-primary-light truncate max-w-[140px]" title={last_editor_name || 'Desconhecido'}>
-                                                                                                {last_editor_name || 'Desconhecido'}
+                                                                                            <span className={`truncate max-w-[140px] ${nameClass}`} title={editorName}>
+                                                                                                {editorName}
                                                                                             </span>
                                                                                             <span>{dateStr} {timeStr}</span>
                                                                                         </div>
@@ -853,6 +933,19 @@ export default function StitchDashboard({
                                                                                     >
                                                                                         <FileText className="h-4 w-4" />
                                                                                     </button>
+
+                                                                                    {campaign.channel === 'google_ads' && isGoogleConnected && (
+                                                                                        <button
+                                                                                            onClick={() => {
+                                                                                                setCampaignToLink(campaign);
+                                                                                                setShowGoogleLinkModal(true);
+                                                                                            }}
+                                                                                            className="text-blue-400 hover:text-blue-600 transition-colors p-1"
+                                                                                            title="Filtrar / Vincular Campanha Google Ads"
+                                                                                        >
+                                                                                            <Filter className="h-4 w-4" />
+                                                                                        </button>
+                                                                                    )}
                                                                                     <button
                                                                                         onClick={() => {
                                                                                             if (confirm('Deletar esta campanha?')) {
@@ -938,6 +1031,41 @@ export default function StitchDashboard({
                     }
                 }}
             />
+
+            {/* Modal de Vinculação Google Ads */}
+            {showGoogleLinkModal && isGoogleConnected && (
+                <GoogleCampaignSelectorModal
+                    open={showGoogleLinkModal}
+                    onClose={() => {
+                        setShowGoogleLinkModal(false);
+                        setCampaignToLink(null);
+                    }}
+                    integrationId={googleIntegrationStatus.integrationId}
+                    initialSelection={(() => {
+                        if (!campaignToLink?.observations) return [];
+                        const matches = campaignToLink.observations.match(/\[GOOGLE_ID:(\d+)\]/g);
+                        if (!matches) return [];
+                        return matches.map(m => m.replace(/\[GOOGLE_ID:|\]/g, ''));
+                    })()}
+                    initialRules={(() => {
+                        if (!campaignToLink?.observations) return undefined;
+                        const ruleMatch = campaignToLink.observations.match(/\[GOOGLE_RULE:([^\]]+)\]/);
+                        if (ruleMatch && ruleMatch[1]) {
+                            try {
+                                const json = atob(ruleMatch[1]);
+                                const data = JSON.parse(json);
+                                return data.rules as FilterRule[];
+                            } catch (e) {
+                                console.error("Failed to parse rules", e);
+                                return undefined;
+                            }
+                        }
+                        return undefined;
+                    })()}
+                    // @ts-ignore
+                    onSelect={handleLinkGoogleCampaign}
+                />
+            )}
         </div>
     );
 }

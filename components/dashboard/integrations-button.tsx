@@ -3,7 +3,7 @@
 import { MouseEvent, useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Loader2, CheckCircle2, Zap, AlertCircle } from 'lucide-react';
+import { Loader2, CheckCircle2, Zap, AlertCircle, RefreshCw, Search } from 'lucide-react';
 import { toast } from 'sonner';
 
 import {
@@ -26,12 +26,17 @@ import {
 interface IntegrationsButtonProps {
     clientId: string;
     onConnectGoogle: () => void;
+    onSyncGoogle: () => void;
 }
 
-export default function IntegrationsButton({ clientId, onConnectGoogle }: IntegrationsButtonProps) {
+export default function IntegrationsButton({ clientId, onConnectGoogle, onSyncGoogle }: IntegrationsButtonProps) {
     const queryClient = useQueryClient();
     const [isSelectionOpen, setSelectionOpen] = useState(false); // Meta Ads
     const [isGoogleSelectionOpen, setGoogleSelectionOpen] = useState(false); // Google Ads
+
+    // Search states
+    const [metaSearchTerm, setMetaSearchTerm] = useState('');
+    const [googleSearchTerm, setGoogleSearchTerm] = useState('');
 
     // --- GOOGLE ADS ---
     const { data: googleStatus, isLoading: isLoadingGoogle } = useQuery({
@@ -47,12 +52,8 @@ export default function IntegrationsButton({ clientId, onConnectGoogle }: Integr
     const isGoogleConnected = googleStatus?.connected;
     const googleNeedsSelection = googleStatus?.needsSelection;
 
-    // Monitor Google status to auto-open modal if needed
-    useEffect(() => {
-        if (isGoogleConnected && googleNeedsSelection) {
-            setGoogleSelectionOpen(true);
-        }
-    }, [isGoogleConnected, googleNeedsSelection]);
+    // Auto-open removed for better UX. User should click to configure.
+
 
     const googleDisconnectMutation = useMutation({
         mutationFn: async () => {
@@ -145,12 +146,8 @@ export default function IntegrationsButton({ clientId, onConnectGoogle }: Integr
     const isFacebookConnected = facebookStatus?.connected;
     const needsSelection = facebookStatus?.needsSelection;
 
-    // Monitor status to auto-open modal if needed
-    useEffect(() => {
-        if (isFacebookConnected && needsSelection) {
-            setSelectionOpen(true);
-        }
-    }, [isFacebookConnected, needsSelection]);
+    // Auto-open removed for better UX. User should click to configure.
+
 
     const facebookDisconnectMutation = useMutation({
         mutationFn: async () => {
@@ -285,6 +282,20 @@ export default function IntegrationsButton({ clientId, onConnectGoogle }: Integr
                         )}
                     </DropdownMenuItem>
 
+                    {/* Sync Action for Google Ads */}
+                    {isGoogleConnected && !googleNeedsSelection && (
+                        <DropdownMenuItem
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onSyncGoogle();
+                            }}
+                            className="pl-12 py-1.5 text-xs text-blue-600 cursor-pointer hover:bg-blue-50 mb-1 rounded-lg"
+                        >
+                            <RefreshCw className="w-3 h-3 mr-2" />
+                            Sincronizar Gastos Agora
+                        </DropdownMenuItem>
+                    )}
+
                     <DropdownMenuSeparator className="my-1" />
 
                     {/* META ADS */}
@@ -331,32 +342,49 @@ export default function IntegrationsButton({ clientId, onConnectGoogle }: Integr
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="mt-4 max-h-[300px] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                    {/* Search Input */}
+                    <div className="relative mt-2">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="Buscar por nome ou ID..."
+                            value={metaSearchTerm}
+                            onChange={(e) => setMetaSearchTerm(e.target.value)}
+                            className="w-full pl-9 pr-4 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                        />
+                    </div>
+
+                    <div className="mt-2 max-h-[300px] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
                         {isLoadingAccounts ? (
                             <div className="flex items-center justify-center py-8">
                                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
                             </div>
                         ) : accountsData?.accounts?.length > 0 ? (
-                            accountsData.accounts.map((acc: any) => (
-                                <button
-                                    key={acc.id}
-                                    onClick={() => selectAccountMutation.mutate(acc.id)}
-                                    disabled={selectAccountMutation.isPending}
-                                    className="w-full text-left p-3 rounded-lg border hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 flex items-center justify-between group"
-                                >
-                                    <div className="flex flex-col">
-                                        <span className="font-medium text-sm text-gray-900">{acc.name}</span>
-                                        <div className="flex items-center gap-2 text-xs text-gray-500">
-                                            <span>ID: {acc.id}</span>
-                                            <span>•</span>
-                                            <span>{acc.currency}</span>
+                            accountsData.accounts
+                                .filter((acc: any) =>
+                                    acc.name.toLowerCase().includes(metaSearchTerm.toLowerCase()) ||
+                                    acc.id.includes(metaSearchTerm)
+                                )
+                                .map((acc: any) => (
+                                    <button
+                                        key={acc.id}
+                                        onClick={() => selectAccountMutation.mutate(acc.id)}
+                                        disabled={selectAccountMutation.isPending}
+                                        className="w-full text-left p-3 rounded-lg border hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 flex items-center justify-between group"
+                                    >
+                                        <div className="flex flex-col">
+                                            <span className="font-medium text-sm text-gray-900">{acc.name}</span>
+                                            <div className="flex items-center gap-2 text-xs text-gray-500">
+                                                <span>ID: {acc.id}</span>
+                                                <span>•</span>
+                                                <span>{acc.currency}</span>
+                                            </div>
                                         </div>
-                                    </div>
-                                    {selectAccountMutation.isPending && (
-                                        <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-                                    )}
-                                </button>
-                            ))
+                                        {selectAccountMutation.isPending && (
+                                            <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                                        )}
+                                    </button>
+                                ))
                         ) : (
                             <div className="text-center py-6 text-gray-500 text-sm">
                                 Nenhuma conta de anúncio encontrada ou erro ao carregar.
@@ -376,7 +404,19 @@ export default function IntegrationsButton({ clientId, onConnectGoogle }: Integr
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="mt-4 max-h-[300px] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                    {/* Search Input */}
+                    <div className="relative mt-2">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="Buscar por nome ou ID..."
+                            value={googleSearchTerm}
+                            onChange={(e) => setGoogleSearchTerm(e.target.value)}
+                            className="w-full pl-9 pr-4 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                        />
+                    </div>
+
+                    <div className="mt-2 max-h-[300px] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
                         {isLoadingGoogleAccounts ? (
                             <div className="flex items-center justify-center py-8">
                                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -392,29 +432,34 @@ export default function IntegrationsButton({ clientId, onConnectGoogle }: Integr
                                 )}
                             </div>
                         ) : googleAccountsData?.customers?.length > 0 ? (
-                            googleAccountsData.customers.map((acc: any) => (
-                                <button
-                                    key={acc.id}
-                                    onClick={() => selectGoogleAccountMutation.mutate({
-                                        externalAccountId: acc.id,
-                                        loginCustomerId: acc.loginCustomerId,
-                                        accountName: acc.name
-                                    })}
-                                    disabled={selectGoogleAccountMutation.isPending}
-                                    className="w-full text-left p-3 rounded-lg border hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 flex items-center justify-between group"
-                                >
-                                    <div className="flex flex-col">
-                                        <span className="font-medium text-sm text-gray-900">{acc.name}</span>
-                                        <div className="flex items-center gap-2 text-xs text-gray-500">
-                                            <span>ID: {acc.id}</span>
-                                            <span className="text-[10px] bg-gray-100 px-1 rounded">{acc.resourceName}</span>
+                            googleAccountsData.customers
+                                .filter((acc: any) =>
+                                    acc.name.toLowerCase().includes(googleSearchTerm.toLowerCase()) ||
+                                    String(acc.id).includes(googleSearchTerm)
+                                )
+                                .map((acc: any) => (
+                                    <button
+                                        key={acc.id}
+                                        onClick={() => selectGoogleAccountMutation.mutate({
+                                            externalAccountId: acc.id,
+                                            loginCustomerId: acc.loginCustomerId,
+                                            accountName: acc.name
+                                        })}
+                                        disabled={selectGoogleAccountMutation.isPending}
+                                        className="w-full text-left p-3 rounded-lg border hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 flex items-center justify-between group"
+                                    >
+                                        <div className="flex flex-col">
+                                            <span className="font-medium text-sm text-gray-900">{acc.name}</span>
+                                            <div className="flex items-center gap-2 text-xs text-gray-500">
+                                                <span>ID: {acc.id}</span>
+                                                <span className="text-[10px] bg-gray-100 px-1 rounded">{acc.resourceName}</span>
+                                            </div>
                                         </div>
-                                    </div>
-                                    {selectGoogleAccountMutation.isPending && (
-                                        <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-                                    )}
-                                </button>
-                            ))
+                                        {selectGoogleAccountMutation.isPending && (
+                                            <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                                        )}
+                                    </button>
+                                ))
                         ) : (
                             <div className="text-center py-6 text-gray-500 text-sm">
                                 Nenhuma conta acessível encontrada.

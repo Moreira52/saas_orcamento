@@ -80,7 +80,7 @@ function DashboardContent() {
     if (isConnectingGoogle && connectingClientId) {
       interval = setInterval(async () => {
         try {
-          const res = await fetch(`/api/integrations/status?clientId=${connectingClientId}`);
+          const res = await fetch(`/api/integrations/status?clientId=${connectingClientId}&provider=google`);
           const json = await res.json();
 
           if (json.connected && json.integrationId) {
@@ -116,6 +116,37 @@ function DashboardContent() {
       'Google Ads Connect',
       `width=${width},height=${height},top=${top},left=${left}`
     );
+  };
+
+  const handleSyncGoogle = async (clientId: string) => {
+    const toastId = toast.loading('Sincronizando gastos do Google Ads...');
+    try {
+      const res = await fetch('/api/integrations/google/sync-spend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientId,
+          monthYear: selectedMonth
+        })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Erro na sincronização');
+      }
+
+      toast.dismiss(toastId);
+      if (data.updatedCount > 0) {
+        toast.success(data.message);
+        queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+      } else {
+        toast.info(data.message);
+      }
+    } catch (error: any) {
+      toast.dismiss(toastId);
+      toast.error(`Falha na sincronização: ${error.message}`);
+    }
   };
 
 
@@ -387,6 +418,7 @@ function DashboardContent() {
         onLogout={handleLogout}
         currentUser={currentUser}
         onConnectGoogle={handleConnectGoogle}
+        onSyncGoogle={handleSyncGoogle}
       />
 
       <NewClientModal
