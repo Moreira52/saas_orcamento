@@ -24,6 +24,8 @@ import { MetricCards } from '@/components/dashboard/metric-cards';
 import { startOfMonth, endOfMonth, differenceInDays, isPast, isFuture } from 'date-fns';
 import StitchDashboard from '@/components/dashboard/stitch-dashboard';
 import { toast } from 'sonner';
+import GoogleAccountSelectorModal from '@/components/modals/google-account-selector-modal';
+import ConnectingModal from '@/components/modals/connecting-modal';
 
 function DashboardContent() {
   const router = useRouter();
@@ -64,6 +66,58 @@ function DashboardContent() {
   const [showEditClientModal, setShowEditClientModal] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
   const [clientToEdit, setClientToEdit] = useState<Client | null>(null);
+
+  // Google Integration States
+  const [isConnectingGoogle, setIsConnectingGoogle] = useState(false);
+  const [connectingClientId, setConnectingClientId] = useState<string | null>(null);
+  const [foundIntegrationId, setFoundIntegrationId] = useState<string | null>(null);
+  const [showGoogleAccountSelector, setShowGoogleAccountSelector] = useState(false);
+
+  // Polling for Google Connection
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+
+    if (isConnectingGoogle && connectingClientId) {
+      interval = setInterval(async () => {
+        try {
+          const res = await fetch(`/api/integrations/status?clientId=${connectingClientId}`);
+          const json = await res.json();
+
+          if (json.connected && json.integrationId) {
+            // Conectou!
+            setIsConnectingGoogle(false);
+            setFoundIntegrationId(json.integrationId);
+            setShowGoogleAccountSelector(true);
+            toast.success('Autorização do Google recebida!');
+          }
+        } catch (e) {
+          console.error("Polling error", e);
+        }
+      }, 3000); // Checa a cada 3 segundos
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    }
+  }, [isConnectingGoogle, connectingClientId]);
+
+  const handleConnectGoogle = (clientId: string) => {
+    setConnectingClientId(clientId);
+    setIsConnectingGoogle(true);
+
+    // Abrir Popup
+    const width = 600;
+    const height = 700;
+    const left = window.screen.width / 2 - width / 2;
+    const top = window.screen.height / 2 - height / 2;
+
+    window.open(
+      `/api/integrations/google/auth?clientId=${clientId}`,
+      'Google Ads Connect',
+      `width=${width},height=${height},top=${top},left=${left}`
+    );
+  };
+
 
   const queryClient = useQueryClient();
 
@@ -332,6 +386,7 @@ function DashboardContent() {
         }}
         onLogout={handleLogout}
         currentUser={currentUser}
+        onConnectGoogle={handleConnectGoogle}
       />
 
       <NewClientModal
@@ -369,6 +424,36 @@ function DashboardContent() {
           await deleteClient.mutateAsync(clientId);
         }}
       />
+
+      {/* Google Ads Account Selector Logic */}
+      {/* 
+          Agora controlamos via state 'showGoogleAccountSelector' 
+          e 'foundIntegrationId' que veio do polling
+      */}
+      {showGoogleAccountSelector && foundIntegrationId && connectingClientId && (
+        <GoogleAccountSelectorModal
+          open={true}
+          onClose={() => {
+            setShowGoogleAccountSelector(false);
+            setFoundIntegrationId(null);
+            setConnectingClientId(null);
+            // Limpar URL se tiver sobrado sujeira
+            const url = new URL(window.location.href);
+            url.searchParams.delete('action');
+            url.searchParams.delete('integration_id');
+            router.replace(url.toString());
+          }}
+          clientId={connectingClientId}
+          integrationId={foundIntegrationId}
+        />
+      )}
+
+      {/* Modal de "Aguarde..." */}
+      <ConnectingModal
+        open={isConnectingGoogle}
+        onCancel={() => setIsConnectingGoogle(false)}
+      />
+
       <Toaster />
     </>
   );

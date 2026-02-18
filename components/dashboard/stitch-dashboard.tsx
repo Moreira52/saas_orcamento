@@ -38,6 +38,8 @@ import { Campaign, Client } from '@/types/database';
 import { useState, useEffect } from 'react';
 import ObservationsModal from '@/components/modals/observations-modal';
 import { useCampaignCalculations } from '@/lib/hooks/use-campaign-calculations';
+import { formatCurrency as formatCurrencyUtil } from '@/lib/utils'; // Renamed to avoid conflict with lucide-react import
+import IntegrationsButton from './integrations-button';
 import { cn } from '@/lib/utils';
 import MonthYearPicker from '@/components/ui/month-year-picker';
 import {
@@ -85,6 +87,7 @@ interface StitchDashboardProps {
         role: 'admin' | 'analyst' | 'pm';
         avatar_url?: string | null;
     } | null;
+    onConnectGoogle: (clientId: string) => void;
 }
 
 export default function StitchDashboard({
@@ -108,7 +111,8 @@ export default function StitchDashboard({
     selectedAnalystId,
     onSelectAnalyst,
     onLogout,
-    currentUser
+    currentUser,
+    onConnectGoogle
 }: StitchDashboardProps) {
     const { setTheme, theme } = useTheme();
     const activeClient = clients.find(c => c.id === activeClientId);
@@ -462,6 +466,13 @@ export default function StitchDashboard({
                                                     </span>
                                                 </div>
                                             )}
+
+                                            {/* Botão de Integrações (Dropdown) */}
+                                            <IntegrationsButton
+                                                clientId={activeClient.id}
+                                                onConnectGoogle={() => onConnectGoogle(activeClient.id)}
+                                            />
+
                                             <button
                                                 onClick={() => onEditClient(activeClient)}
                                                 className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-text-muted-light hover:text-text-primary-light hover:bg-card-hover-light rounded-lg transition-colors"
