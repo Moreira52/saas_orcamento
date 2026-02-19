@@ -25,6 +25,7 @@ import { startOfMonth, endOfMonth, differenceInDays, isPast, isFuture } from 'da
 import StitchDashboard from '@/components/dashboard/stitch-dashboard';
 import { toast } from 'sonner';
 import GoogleAccountSelectorModal from '@/components/modals/google-account-selector-modal';
+import FacebookAccountSelectorModal from '@/components/modals/facebook-account-selector-modal';
 import ConnectingModal from '@/components/modals/connecting-modal';
 
 function DashboardContent() {
@@ -73,6 +74,12 @@ function DashboardContent() {
   const [foundIntegrationId, setFoundIntegrationId] = useState<string | null>(null);
   const [showGoogleAccountSelector, setShowGoogleAccountSelector] = useState(false);
 
+  // Meta Integration States
+  const [isConnectingFacebook, setIsConnectingFacebook] = useState(false);
+  const [connectingFacebookClientId, setConnectingFacebookClientId] = useState<string | null>(null);
+  const [foundFacebookIntegrationId, setFoundFacebookIntegrationId] = useState<string | null>(null);
+  const [showFacebookAccountSelector, setShowFacebookAccountSelector] = useState(false);
+
   // Polling for Google Connection
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -100,6 +107,35 @@ function DashboardContent() {
       if (interval) clearInterval(interval);
     }
   }, [isConnectingGoogle, connectingClientId]);
+
+  // Polling for Facebook Connection
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+
+    if (isConnectingFacebook && connectingFacebookClientId) {
+      interval = setInterval(async () => {
+        try {
+          const res = await fetch(`/api/integrations/status?clientId=${connectingFacebookClientId}&provider=meta`);
+          const json = await res.json();
+
+          if (json.connected && json.integrationId) {
+            // Conectou!
+            setIsConnectingFacebook(false);
+            setFoundFacebookIntegrationId(json.integrationId);
+            setShowFacebookAccountSelector(true);
+            toast.success('Autorização do Meta Ads recebida!');
+            queryClient.invalidateQueries({ queryKey: ['integration-status', 'meta', connectingFacebookClientId] });
+          }
+        } catch (e) {
+          console.error("Polling error facebook", e);
+        }
+      }, 3000); // Checa a cada 3 segundos
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    }
+  }, [isConnectingFacebook, connectingFacebookClientId]);
 
   const handleConnectGoogle = (clientId: string) => {
     setConnectingClientId(clientId);
@@ -146,6 +182,53 @@ function DashboardContent() {
     } catch (error: any) {
       toast.dismiss(toastId);
       toast.error(`Falha na sincronização: ${error.message}`);
+    }
+  };
+
+  const handleConnectFacebook = (clientId: string) => {
+    setConnectingFacebookClientId(clientId);
+    setIsConnectingFacebook(true);
+
+    const width = 600;
+    const height = 700;
+    const left = window.screen.width / 2 - width / 2;
+    const top = window.screen.height / 2 - height / 2;
+
+    window.open(
+      `/api/integrations/facebook/auth?clientId=${clientId}`,
+      'Meta Ads Connect',
+      `width=${width},height=${height},top=${top},left=${left}`
+    );
+  };
+
+  const handleSyncFacebook = async (clientId: string) => {
+    const toastId = toast.loading('Sincronizando gastos do Meta Ads...');
+    try {
+      const res = await fetch('/api/integrations/facebook/sync-spend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientId,
+          monthYear: selectedMonth
+        })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Erro na sincronização');
+      }
+
+      toast.dismiss(toastId);
+      if (data.updatedCount > 0) {
+        toast.success(data.message);
+        queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+      } else {
+        toast.info(data.message);
+      }
+    } catch (error: any) {
+      toast.dismiss(toastId);
+      toast.error(`Falha na sincronização Meta: ${error.message}`);
     }
   };
 
@@ -419,6 +502,8 @@ function DashboardContent() {
         currentUser={currentUser}
         onConnectGoogle={handleConnectGoogle}
         onSyncGoogle={handleSyncGoogle}
+        onConnectMeta={handleConnectFacebook}
+        onSyncMeta={handleSyncFacebook}
       />
 
       <NewClientModal
@@ -457,33 +542,32 @@ function DashboardContent() {
         }}
       />
 
-      {/* Google Ads Account Selector Logic */}
-      {/* 
-          Agora controlamos via state 'showGoogleAccountSelector' 
-          e 'foundIntegrationId' que veio do polling
-      */}
-      {showGoogleAccountSelector && foundIntegrationId && connectingClientId && (
-        <GoogleAccountSelectorModal
-          open={true}
-          onClose={() => {
-            setShowGoogleAccountSelector(false);
-            setFoundIntegrationId(null);
-            setConnectingClientId(null);
-            // Limpar URL se tiver sobrado sujeira
-            const url = new URL(window.location.href);
-            url.searchParams.delete('action');
-            url.searchParams.delete('integration_id');
-            router.replace(url.toString());
-          }}
-          clientId={connectingClientId}
-          integrationId={foundIntegrationId}
-        />
-      )}
+      <GoogleAccountSelectorModal
+        open={showGoogleAccountSelector}
+        onClose={() => {
+          setShowGoogleAccountSelector(false);
+          queryClient.invalidateQueries({ queryKey: ['integration-status', 'google'] });
+        }}
+        clientId={activeClient?.id || ''}
+        integrationId={foundIntegrationId || ''}
+      />
+
+      <FacebookAccountSelectorModal
+        open={showFacebookAccountSelector}
+        onClose={() => {
+          setShowFacebookAccountSelector(false);
+          queryClient.invalidateQueries({ queryKey: ['integration-status', 'meta'] });
+        }}
+        clientId={activeClient?.id || ''}
+      />
 
       {/* Modal de "Aguarde..." */}
       <ConnectingModal
-        open={isConnectingGoogle}
-        onCancel={() => setIsConnectingGoogle(false)}
+        open={isConnectingGoogle || isConnectingFacebook}
+        onCancel={() => {
+          setIsConnectingGoogle(false);
+          setIsConnectingFacebook(false);
+        }}
       />
 
       <Toaster />

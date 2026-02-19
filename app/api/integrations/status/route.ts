@@ -6,7 +6,7 @@ export async function GET(request: Request) {
     const supabase = await createClient();
     const { searchParams } = new URL(request.url);
     const clientId = searchParams.get('clientId');
-    const provider = searchParams.get('provider'); // 'google' | 'facebook'
+    const provider = searchParams.get('provider'); // 'google' | 'meta'
 
     if (!clientId) return NextResponse.json({ error: 'Missing clientId' }, { status: 400 });
     if (!provider) return NextResponse.json({ error: 'Missing provider' }, { status: 400 });

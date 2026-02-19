@@ -19,7 +19,7 @@ export async function GET(request: Request) {
         .from('integrations')
         .select('access_token')
         .eq('client_id', clientId)
-        .eq('provider', 'facebook')
+        .eq('provider', 'meta')
         .single();
 
     if (dbError || !integration) {

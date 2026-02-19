@@ -22,7 +22,7 @@ export async function POST(request: Request) {
                 external_account_id: accountId,
                 updated_at: new Date().toISOString()
             })
-            .match({ client_id: clientId, provider: 'facebook' });
+            .match({ client_id: clientId, provider: 'meta' });
 
         if (error) {
             throw error;

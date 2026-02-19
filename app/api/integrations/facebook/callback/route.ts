@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
 /**
@@ -54,20 +54,29 @@ export async function GET(request: Request) {
         const longLivedToken = longLivedData.access_token;
         const expiresIn = longLivedData.expires_in; // Segundos
 
-        // 3. Inicializar Supabase Admin
-        const supabase = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        );
+        // 3. Inicializar Supabase Admin (Autenticado)
+        const supabase = await createClient();
+
+        // Check user session for debugging
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) {
+            console.error('Erro de sessão no callback:', userError);
+            // Se não tiver sessão, o RLS vai falhar.
+            // Retornamos 401 para indicar que o usuário não foi reconhecido.
+            return NextResponse.json({
+                error: 'Usuário não autenticado no callback.',
+                details: userError?.message || 'No user session found'
+            }, { status: 401 });
+        }
 
         // 4. Salvar no Banco
         const { error: dbError } = await supabase
             .from('integrations')
             .upsert({
                 client_id: clientId,
-                provider: 'facebook',
-                access_token: longLivedToken, // Meta usa apenas access_token (long-lived), não tem refresh_token padrão como Google
-                refresh_token: null, // Não se aplica da mesma forma
+                provider: 'meta',
+                access_token: longLivedToken,
+                refresh_token: 'META_LONG_LIVED_TOKEN', // Placeholder: Meta usa tokens de longa duração (60 dias) sem refresh token explícito
                 external_account_id: 'PENDING_SELECTION',
                 metadata: {
                     expires_in: expiresIn,
@@ -78,7 +87,13 @@ export async function GET(request: Request) {
 
         if (dbError) {
             console.error('Erro ao salvar no Supabase:', dbError);
-            return NextResponse.json({ error: 'Falha ao salvar integração no banco.' }, { status: 500 });
+            return NextResponse.json({
+                error: 'Falha ao salvar integração no banco.',
+                dbError: dbError.message,
+                dbCode: dbError.code,
+                dbDetails: dbError.details,
+                dbHint: dbError.hint
+            }, { status: 500 });
         }
 
         // 5. Redirecionar para página de sucesso via Client (fechar popup)

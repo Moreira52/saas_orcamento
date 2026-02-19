@@ -21,9 +21,15 @@ import {
     LogOut,
     Sun,
     Moon,
-    GripVertical
+    GripVertical,
+    Info
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -38,6 +44,7 @@ import { Campaign, Client } from '@/types/database';
 import { useState, useEffect } from 'react';
 import ObservationsModal from '@/components/modals/observations-modal';
 import GoogleCampaignSelectorModal from '@/components/modals/google-campaign-selector-modal';
+import MetaCampaignSelectorModal, { FilterRule as MetaFilterRule } from '@/components/modals/meta-campaign-selector-modal';
 import { useQuery } from '@tanstack/react-query';
 import { useCampaignCalculations } from '@/lib/hooks/use-campaign-calculations';
 import { formatCurrency as formatCurrencyUtil } from '@/lib/utils'; // Renamed to avoid conflict with lucide-react import
@@ -91,6 +98,8 @@ interface StitchDashboardProps {
     } | null;
     onConnectGoogle: (clientId: string) => void;
     onSyncGoogle: (clientId: string) => void;
+    onConnectMeta: (clientId: string) => void;
+    onSyncMeta: (clientId: string) => void;
 }
 
 export default function StitchDashboard({
@@ -116,7 +125,9 @@ export default function StitchDashboard({
     onLogout,
     currentUser,
     onConnectGoogle,
-    onSyncGoogle
+    onSyncGoogle,
+    onConnectMeta,
+    onSyncMeta
 }: StitchDashboardProps) {
     const { setTheme, theme } = useTheme();
     const activeClient = clients.find(c => c.id === activeClientId);
@@ -136,10 +147,28 @@ export default function StitchDashboard({
 
     const isGoogleConnected = googleIntegrationStatus?.connected && googleIntegrationStatus?.integrationId;
 
-    // Linking Google Campaign State
+    // Meta Integration Status
+    const { data: metaIntegrationStatus } = useQuery({
+        queryKey: ['integration-status', 'meta', activeClientId],
+        queryFn: async () => {
+            if (!activeClientId) return null;
+            const res = await fetch(`/api/integrations/status?clientId=${activeClientId}&provider=meta`);
+            if (!res.ok) return null;
+            return res.json();
+        },
+        enabled: !!activeClientId,
+        staleTime: 10000,
+    });
+
+    const isMetaConnected = metaIntegrationStatus?.connected && metaIntegrationStatus?.integrationId;
+
     // Linking Google Campaign State
     const [showGoogleLinkModal, setShowGoogleLinkModal] = useState(false);
     const [campaignToLink, setCampaignToLink] = useState<Campaign | null>(null);
+
+    // Linking Meta Campaign State
+    const [showMetaLinkModal, setShowMetaLinkModal] = useState(false);
+    const [campaignToMetaLink, setCampaignToMetaLink] = useState<Campaign | null>(null);
 
     // Define FilterRule interface locally to match the modal's expected type
     interface FilterRule {
@@ -180,6 +209,32 @@ export default function StitchDashboard({
         // Automatically sync spend to reflect new campaigns immediately
         if (activeClientId) {
             onSyncGoogle(activeClientId);
+        }
+    };
+
+    const handleLinkMetaCampaign = async (metaCampaigns: { id: string; name: string }[], rules?: MetaFilterRule[]) => {
+        if (!campaignToMetaLink) return;
+
+        let currentObs = campaignToMetaLink.observations || '';
+
+        // Remove old Meta tags
+        currentObs = currentObs.replace(/\[META_ID:[^\]]+\]\s*/g, ' ').replace(/\[META_RULE:[^\]]+\]\s*/g, ' ').trim();
+        currentObs = currentObs.replace(/\s+/g, ' ');
+
+        let newTags = '';
+        if (rules && rules.length > 0) {
+            const base64Rules = btoa(JSON.stringify({ rules }));
+            newTags = `[META_RULE:${base64Rules}]`;
+        } else {
+            newTags = metaCampaigns.map(c => `[META_ID:${c.id}]`).join(' ');
+        }
+
+        const newObs = `${newTags} ${currentObs}`.trim();
+
+        await onUpdateCampaign(campaignToMetaLink.id, { observations: newObs });
+
+        if (activeClientId) {
+            onSyncMeta(activeClientId);
         }
     };
 
@@ -544,6 +599,8 @@ export default function StitchDashboard({
                                                 clientId={activeClient.id}
                                                 onConnectGoogle={() => onConnectGoogle(activeClient.id)}
                                                 onSyncGoogle={() => onSyncGoogle(activeClient.id)}
+                                                onConnectMeta={() => onConnectMeta(activeClient.id)}
+                                                onSyncMeta={() => onSyncMeta(activeClient.id)}
                                             />
 
                                             <button
@@ -714,12 +771,84 @@ export default function StitchDashboard({
                                                     <th className="w-8 pb-4 pl-6"></th>
                                                     <th className="pb-4 pl-2 text-xs font-semibold text-text-muted-light uppercase tracking-wider min-w-[220px] align-bottom">Canal / Campanha</th>
                                                     <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider min-w-[120px] text-blue-500 align-bottom">Plano de Mídia</th>
-                                                    <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider min-w-[120px] align-bottom"> % Tempo </th>
-                                                    <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider min-w-[120px] align-bottom">Parciais</th>
+
+                                                    {/* % Tempo */}
+                                                    <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider min-w-[120px] align-bottom">
+                                                        <div className="flex items-center gap-1 group cursor-help">
+                                                            % Tempo
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <Info className="h-3.5 w-3.5 text-gray-400 group-hover:text-primary transition-colors" />
+                                                                </TooltipTrigger>
+                                                                <TooltipContent className="max-w-[220px] text-xs leading-relaxed font-normal normal-case z-50 text-white bg-gray-900 border-gray-800 p-3">
+                                                                    <p>Percentual do mês atual já decorrido. Ex: se hoje é dia 18 de 30, o valor será 60%. Use como referência para comparar o avanço do investimento com o avanço do tempo.</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </div>
+                                                    </th>
+
+                                                    {/* Parciais */}
+                                                    <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider min-w-[120px] align-bottom">
+                                                        <div className="flex items-center gap-1 group cursor-help">
+                                                            Parciais
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <Info className="h-3.5 w-3.5 text-gray-400 group-hover:text-primary transition-colors" />
+                                                                </TooltipTrigger>
+                                                                <TooltipContent className="max-w-[220px] text-xs leading-relaxed font-normal normal-case z-50 text-white bg-gray-900 border-gray-800 p-3">
+                                                                    <p>Valor de investimento que deveria ter sido utilizado até hoje para manter o ritmo ideal de entrega. Calculado com base no orçamento total e na meta de uso configurada (ex: 97% do budget mensal).</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </div>
+                                                    </th>
+
                                                     <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider text-text-primary-light min-w-[140px] align-bottom">Investimento <br />Utilizado</th>
-                                                    <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider text-center align-bottom">% Meta</th>
-                                                    <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider min-w-[120px] align-bottom">Investimento <br />/ Dia</th>
-                                                    <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider text-center align-bottom">% Gasto <br />Real</th>
+
+                                                    {/* % Meta */}
+                                                    <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider text-center align-bottom">
+                                                        <div className="flex items-center justify-center gap-1 group cursor-help">
+                                                            % Meta
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <Info className="h-3.5 w-3.5 text-gray-400 group-hover:text-primary transition-colors" />
+                                                                </TooltipTrigger>
+                                                                <TooltipContent className="max-w-[220px] text-xs leading-relaxed font-normal normal-case z-50 text-left text-white bg-gray-900 border-gray-800 p-3">
+                                                                    <p>Percentual que indica o quanto o investimento realizado está alinhado com o valor parcial esperado para hoje. Valores próximos de 100% indicam um pace saudável. Abaixo de 100% significa subentrega; acima, sobreentrega.</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </div>
+                                                    </th>
+
+                                                    {/* Investimento / Dia */}
+                                                    <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider min-w-[120px] align-bottom">
+                                                        <div className="flex items-center gap-1 group cursor-help">
+                                                            Investimento <br />/ Dia
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <Info className="h-3.5 w-3.5 text-gray-400 group-hover:text-primary transition-colors" />
+                                                                </TooltipTrigger>
+                                                                <TooltipContent className="max-w-[220px] text-xs leading-relaxed font-normal normal-case z-50 text-white bg-gray-900 border-gray-800 p-3">
+                                                                    <p>Valor diário de investimento necessário para atingir a meta configurada (100% ou percentual personalizado) até o último dia do mês. Recalculado automaticamente com base no saldo restante e nos dias disponíveis.</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </div>
+                                                    </th>
+
+                                                    {/* % Gasto Real */}
+                                                    <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider text-center align-bottom">
+                                                        <div className="flex items-center justify-center gap-1 group cursor-help">
+                                                            % Gasto <br />Real
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <Info className="h-3.5 w-3.5 text-gray-400 group-hover:text-primary transition-colors" />
+                                                                </TooltipTrigger>
+                                                                <TooltipContent className="max-w-[220px] text-xs leading-relaxed font-normal normal-case z-50 text-left text-white bg-gray-900 border-gray-800 p-3">
+                                                                    <p>Percentual do orçamento total já consumido, comparado ao percentual do mês decorrido. Quanto mais próximo do % Tempo, mais equilibrado está o pace da campanha. Valores muito abaixo indicam subentrega; muito acima, risco de esgotar o budget antes do fim do mês.</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </div>
+                                                    </th>
+
                                                     <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider text-center align-bottom">Status</th>
                                                     <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider min-w-[130px] align-bottom">Período</th>
                                                     <th className="pb-4 px-3 text-xs font-semibold text-text-muted-light uppercase tracking-wider min-w-[140px] align-bottom">Última <br />Edição</th>
@@ -946,6 +1075,19 @@ export default function StitchDashboard({
                                                                                             <Filter className="h-4 w-4" />
                                                                                         </button>
                                                                                     )}
+
+                                                                                    {campaign.channel === 'meta_ads' && isMetaConnected && (
+                                                                                        <button
+                                                                                            onClick={() => {
+                                                                                                setCampaignToMetaLink(campaign);
+                                                                                                setShowMetaLinkModal(true);
+                                                                                            }}
+                                                                                            className="text-[#1877F2] hover:text-blue-700 transition-colors p-1"
+                                                                                            title="Filtrar / Vincular Campanha Meta Ads"
+                                                                                        >
+                                                                                            <Filter className="h-4 w-4" />
+                                                                                        </button>
+                                                                                    )}
                                                                                     <button
                                                                                         onClick={() => {
                                                                                             if (confirm('Deletar esta campanha?')) {
@@ -1064,6 +1206,36 @@ export default function StitchDashboard({
                     })()}
                     // @ts-ignore
                     onSelect={handleLinkGoogleCampaign}
+                />
+            )}
+            {/* Modal de Vinculação Meta Ads */}
+            {showMetaLinkModal && isMetaConnected && (
+                <MetaCampaignSelectorModal
+                    open={showMetaLinkModal}
+                    onClose={() => {
+                        setShowMetaLinkModal(false);
+                        setCampaignToMetaLink(null);
+                    }}
+                    integrationId={metaIntegrationStatus.integrationId}
+                    initialSelection={(() => {
+                        if (!campaignToMetaLink?.observations) return [];
+                        const matches = campaignToMetaLink.observations.match(/\[META_ID:([^\]]+)\]/g);
+                        if (!matches) return [];
+                        return matches.map(m => m.replace(/\[META_ID:|\]/g, ''));
+                    })()}
+                    initialRules={(() => {
+                        if (!campaignToMetaLink?.observations) return undefined;
+                        const ruleMatch = campaignToMetaLink.observations.match(/\[META_RULE:([^\]]+)\]/);
+                        if (ruleMatch && ruleMatch[1]) {
+                            try {
+                                return JSON.parse(atob(ruleMatch[1])).rules as MetaFilterRule[];
+                            } catch (e) {
+                                return undefined;
+                            }
+                        }
+                        return undefined;
+                    })()}
+                    onSelect={handleLinkMetaCampaign}
                 />
             )}
         </div>

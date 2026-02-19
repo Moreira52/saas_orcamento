@@ -22,20 +22,22 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import FacebookAccountSelectorModal from '@/components/modals/facebook-account-selector-modal';
 
 interface IntegrationsButtonProps {
     clientId: string;
     onConnectGoogle: () => void;
     onSyncGoogle: () => void;
+    onConnectMeta: () => void;
+    onSyncMeta: () => void;
 }
 
-export default function IntegrationsButton({ clientId, onConnectGoogle, onSyncGoogle }: IntegrationsButtonProps) {
+export default function IntegrationsButton({ clientId, onConnectGoogle, onSyncGoogle, onConnectMeta, onSyncMeta }: IntegrationsButtonProps) {
     const queryClient = useQueryClient();
     const [isSelectionOpen, setSelectionOpen] = useState(false); // Meta Ads
     const [isGoogleSelectionOpen, setGoogleSelectionOpen] = useState(false); // Google Ads
 
     // Search states
-    const [metaSearchTerm, setMetaSearchTerm] = useState('');
     const [googleSearchTerm, setGoogleSearchTerm] = useState('');
 
     // --- GOOGLE ADS ---
@@ -134,9 +136,9 @@ export default function IntegrationsButton({ clientId, onConnectGoogle, onSyncGo
 
     // --- META ADS ---
     const { data: facebookStatus, isLoading: isLoadingFacebook } = useQuery({
-        queryKey: ['integration-status', 'facebook', clientId],
+        queryKey: ['integration-status', 'meta', clientId],
         queryFn: async () => {
-            const res = await fetch(`/api/integrations/status?clientId=${clientId}&provider=facebook`);
+            const res = await fetch(`/api/integrations/status?clientId=${clientId}&provider=meta`);
             if (!res.ok) throw new Error('Failed to check status');
             return res.json();
         },
@@ -161,43 +163,14 @@ export default function IntegrationsButton({ clientId, onConnectGoogle, onSyncGo
         },
         onSuccess: () => {
             toast.success('Meta Ads desconectado com sucesso.');
-            queryClient.invalidateQueries({ queryKey: ['integration-status', 'facebook', clientId] });
+            queryClient.invalidateQueries({ queryKey: ['integration-status', 'meta', clientId] });
         },
         onError: () => {
             toast.error('Erro ao desconectar Meta Ads.');
         }
     });
 
-    // Fetch Accounts for Selection
-    const { data: accountsData, isLoading: isLoadingAccounts } = useQuery({
-        queryKey: ['facebook-accounts', clientId],
-        queryFn: async () => {
-            const res = await fetch(`/api/integrations/facebook/accounts?clientId=${clientId}`);
-            if (!res.ok) throw new Error('Failed to fetch accounts');
-            return res.json();
-        },
-        enabled: isSelectionOpen // Only fetch when modal is open
-    });
-
-    const selectAccountMutation = useMutation({
-        mutationFn: async (accountId: string) => {
-            const res = await fetch('/api/integrations/facebook/select-account', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ clientId, accountId })
-            });
-            if (!res.ok) throw new Error('Falha ao selecionar conta');
-            return res.json();
-        },
-        onSuccess: () => {
-            toast.success('Conta de Anúncio vinculada com sucesso!');
-            setSelectionOpen(false);
-            queryClient.invalidateQueries({ queryKey: ['integration-status', 'facebook', clientId] });
-        },
-        onError: () => {
-            toast.error('Erro ao vincular conta.');
-        }
-    });
+    // Meta Ads Account Selection Logic removed (delegated to FacebookAccountSelectorModal)
 
     const handleFacebookAction = (e: MouseEvent) => {
         e.preventDefault();
@@ -210,17 +183,7 @@ export default function IntegrationsButton({ clientId, onConnectGoogle, onSyncGo
                 facebookDisconnectMutation.mutate();
             }
         } else {
-            // OAuth Flow
-            const width = 600;
-            const height = 700;
-            const left = window.screen.width / 2 - width / 2;
-            const top = window.screen.height / 2 - height / 2;
-
-            window.open(
-                `/api/integrations/facebook/auth?clientId=${clientId}`,
-                'Connect Meta Ads',
-                `width=${width},height=${height},top=${top},left=${left}`
-            );
+            onConnectMeta();
         }
     };
 
@@ -302,7 +265,7 @@ export default function IntegrationsButton({ clientId, onConnectGoogle, onSyncGo
                     <DropdownMenuItem
                         onClick={handleFacebookAction}
                         disabled={isLoadingFacebook || facebookDisconnectMutation.isPending}
-                        className="flex items-center justify-between p-2 cursor-pointer rounded-lg"
+                        className="flex items-center justify-between p-2 cursor-pointer rounded-lg mb-1"
                     >
                         <div className="flex items-center gap-3">
                             <div className="w-8 h-8 relative bg-white rounded-lg p-1 border border-gray-100 shadow-sm flex-shrink-0">
@@ -329,70 +292,32 @@ export default function IntegrationsButton({ clientId, onConnectGoogle, onSyncGo
                             <div className="w-4 h-4 rounded-full border-2 border-gray-200" />
                         )}
                     </DropdownMenuItem>
+
+                    {/* Sync Action for Meta Ads */}
+                    {isFacebookConnected && !needsSelection && (
+                        <DropdownMenuItem
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onSyncMeta();
+                            }}
+                            className="pl-12 py-1.5 text-xs text-blue-600 cursor-pointer hover:bg-blue-50 mb-1 rounded-lg"
+                        >
+                            <RefreshCw className="w-3 h-3 mr-2" />
+                            Sincronizar Gastos Agora
+                        </DropdownMenuItem>
+                    )}
                 </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* SELECTION MODAL (META) */}
-            <Dialog open={isSelectionOpen} onOpenChange={setSelectionOpen}>
-                <DialogContent className="max-w-md">
-                    <DialogHeader>
-                        <DialogTitle>Selecione a Conta Meta Ads</DialogTitle>
-                        <DialogDescription>
-                            Escolha qual conta do Meta Ads será monitorada neste dashboard.
-                        </DialogDescription>
-                    </DialogHeader>
-
-                    {/* Search Input */}
-                    <div className="relative mt-2">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                        <input
-                            type="text"
-                            placeholder="Buscar por nome ou ID..."
-                            value={metaSearchTerm}
-                            onChange={(e) => setMetaSearchTerm(e.target.value)}
-                            className="w-full pl-9 pr-4 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-                        />
-                    </div>
-
-                    <div className="mt-2 max-h-[300px] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
-                        {isLoadingAccounts ? (
-                            <div className="flex items-center justify-center py-8">
-                                <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                            </div>
-                        ) : accountsData?.accounts?.length > 0 ? (
-                            accountsData.accounts
-                                .filter((acc: any) =>
-                                    acc.name.toLowerCase().includes(metaSearchTerm.toLowerCase()) ||
-                                    acc.id.includes(metaSearchTerm)
-                                )
-                                .map((acc: any) => (
-                                    <button
-                                        key={acc.id}
-                                        onClick={() => selectAccountMutation.mutate(acc.id)}
-                                        disabled={selectAccountMutation.isPending}
-                                        className="w-full text-left p-3 rounded-lg border hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 flex items-center justify-between group"
-                                    >
-                                        <div className="flex flex-col">
-                                            <span className="font-medium text-sm text-gray-900">{acc.name}</span>
-                                            <div className="flex items-center gap-2 text-xs text-gray-500">
-                                                <span>ID: {acc.id}</span>
-                                                <span>•</span>
-                                                <span>{acc.currency}</span>
-                                            </div>
-                                        </div>
-                                        {selectAccountMutation.isPending && (
-                                            <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-                                        )}
-                                    </button>
-                                ))
-                        ) : (
-                            <div className="text-center py-6 text-gray-500 text-sm">
-                                Nenhuma conta de anúncio encontrada ou erro ao carregar.
-                            </div>
-                        )}
-                    </div>
-                </DialogContent>
-            </Dialog>
+            {/* SELECTION MODAL (META) - Usando componente compartilhado */}
+            <FacebookAccountSelectorModal
+                open={isSelectionOpen}
+                onClose={() => {
+                    setSelectionOpen(false);
+                    queryClient.invalidateQueries({ queryKey: ['integration-status', 'meta', clientId] });
+                }}
+                clientId={clientId}
+            />
 
             {/* SELECTION MODAL (GOOGLE ADS) */}
             <Dialog open={isGoogleSelectionOpen} onOpenChange={setGoogleSelectionOpen}>
